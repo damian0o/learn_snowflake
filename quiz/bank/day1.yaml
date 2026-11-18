@@ -1,0 +1,565 @@
+# Day 1 question bank. Types: mcq | multi | tf | fill. Quote any answer that YAML could read as a bool or number.
+
+- id: d1-arch-001
+  type: mcq
+  concept: What Snowflake Is
+  tags: [day1, architecture]
+  difficulty: 1
+  prompt: Which statement best describes what Snowflake is?
+  options:
+    - A distributed file system you install on your own cluster
+    - A fully managed cloud data platform delivered as a service, with storage and compute billed separately
+    - A managed Hadoop distribution running Spark and Hive in the cloud
+    - A columnar database engine you deploy inside Kubernetes
+  answer: A fully managed cloud data platform delivered as a service, with storage and compute billed separately
+  explanation: Snowflake is SaaS. There is nothing to install, and it is not built on Hadoop, Spark or any existing engine.
+
+- id: d1-arch-002
+  type: mcq
+  concept: Three-Layer Architecture
+  tags: [day1, architecture]
+  difficulty: 1
+  prompt: Which are the three layers of Snowflake's architecture?
+  options:
+    - Ingestion, Transformation, Serving
+    - Database Storage, Compute, Cloud Services
+    - HDFS, YARN, Metastore
+    - Warehouse, Database, Schema
+  answer: Database Storage, Compute, Cloud Services
+  explanation: Storage at the bottom, Compute (virtual warehouses, also called Query Processing) in the middle, Cloud Services on top.
+
+- id: d1-arch-003
+  type: mcq
+  concept: Three-Layer Architecture
+  tags: [day1, architecture]
+  difficulty: 2
+  prompt: Snowflake describes its architecture as a hybrid of which two traditional designs?
+  options:
+    - Shared-disk and shared-nothing
+    - Client-server and peer-to-peer
+    - Row store and column store
+    - Lambda and Kappa
+  answer: Shared-disk and shared-nothing
+  explanation: One central data repository that all compute can reach (shared-disk) plus MPP clusters where each node processes a portion of the data (shared-nothing).
+
+- id: d1-arch-004
+  type: multi
+  concept: Cloud Services Layer
+  tags: [day1, architecture]
+  difficulty: 2
+  prompt: Which of these are responsibilities of the Cloud Services layer?
+  options:
+    - Authentication and access control
+    - Query parsing and optimisation
+    - Executing the query plan on MPP nodes
+    - Metadata management
+    - Storing micro-partitions
+  answer: [Authentication and access control, Query parsing and optimisation, Metadata management]
+  explanation: Execution happens on virtual warehouses in the Compute layer; micro-partitions live in the Database Storage layer.
+
+- id: d1-arch-005
+  type: mcq
+  concept: Cloud Services Layer
+  tags: [day1, architecture, billing]
+  difficulty: 3
+  prompt: In one day your warehouses used 100 credits and Cloud Services used 14 credits. How many credits are billed?
+  options:
+    - "100"
+    - "104"
+    - "110"
+    - "114"
+  answer: "104"
+  explanation: Cloud Services are charged only for the excess above 10 % of daily warehouse credits. 10 % of 100 is 10, so 14 - 10 = 4 extra credits; 100 + 4 = 104.
+
+- id: d1-arch-006
+  type: tf
+  concept: Compute Layer
+  tags: [day1, architecture]
+  difficulty: 1
+  prompt: The Compute layer and the "Query Processing" layer are two different layers of Snowflake's architecture.
+  answer: false
+  explanation: They are the same layer. The docs now call it Compute; older material and the exam often say Query Processing.
+
+- id: d1-arch-007
+  type: tf
+  concept: Compute Layer
+  tags: [day1, architecture]
+  difficulty: 1
+  prompt: Two virtual warehouses can query the same table at the same time without copying the data.
+  answer: true
+  explanation: Every warehouse reads the single copy of the data in the storage layer. Compute is independent of storage.
+
+- id: d1-store-001
+  type: mcq
+  concept: Database Storage Layer
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: How is the size of stored data measured for billing?
+  options:
+    - Uncompressed bytes as loaded
+    - Average daily on-disk (compressed) bytes, including Time Travel and Fail-safe history
+    - Number of rows times number of columns
+    - Only the current version of each table, uncompressed
+  answer: Average daily on-disk (compressed) bytes, including Time Travel and Fail-safe history
+  explanation: Storage is a flat rate per TB per month on compressed bytes, and historical data kept for Time Travel and Fail-safe counts.
+
+- id: d1-store-002
+  type: tf
+  concept: Database Storage Layer
+  tags: [day1, storage]
+  difficulty: 1
+  prompt: You can read a Snowflake table's underlying files directly from the cloud storage bucket if you have the bucket credentials.
+  answer: false
+  explanation: Snowflake-managed storage is not accessible to customers. Data leaves only through SQL, unloading to a stage, or sharing.
+
+- id: d1-store-003
+  type: fill
+  concept: Micro-partitions
+  tags: [day1, storage]
+  difficulty: 1
+  prompt: A micro-partition holds between 50 MB and how many MB of uncompressed data? (number only)
+  answer: ["500", "500 MB", "500mb"]
+  explanation: 50 to 500 MB uncompressed per micro-partition; much smaller on disk after columnar compression.
+
+- id: d1-store-004
+  type: multi
+  concept: Micro-partitions
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: Which metadata does Snowflake keep for each column within a micro-partition?
+  options:
+    - Minimum and maximum value
+    - Number of distinct values
+    - A B-tree index
+    - Null count
+    - The Hive partition directory
+  answer: [Minimum and maximum value, Number of distinct values, Null count]
+  explanation: Per-partition, per-column statistics drive pruning. Snowflake has no B-tree indexes and no Hive-style directories.
+
+- id: d1-store-005
+  type: mcq
+  concept: Micro-partitions
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: What happens to a micro-partition when you UPDATE a row inside it?
+  options:
+    - The row is changed in place inside the micro-partition
+    - A new micro-partition is written with the change and the old one is retired for Time Travel
+    - The whole table is rewritten
+    - The micro-partition is locked until the next reclustering
+  answer: A new micro-partition is written with the change and the old one is retired for Time Travel
+  explanation: Micro-partitions are immutable. DML writes new partitions; old ones are kept for Time Travel and Fail-safe, which is why rewrites cost storage.
+
+- id: d1-store-006
+  type: mcq
+  concept: Query Pruning
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: Where in Snowsight can you confirm that a query pruned most of a table?
+  options:
+    - Admin → Cost Management, under storage
+    - Query Profile, TableScan node, "Partitions scanned" versus "Partitions total"
+    - Data → Databases, table details
+    - The worksheet's row count footer
+  answer: Query Profile, TableScan node, "Partitions scanned" versus "Partitions total"
+  explanation: A small scanned-to-total ratio is the evidence of pruning. Query Profile is reached from Monitoring → Query History.
+
+- id: d1-store-007
+  type: mcq
+  concept: Query Pruning
+  tags: [day1, storage]
+  difficulty: 3
+  prompt: Which WHERE clause is most likely to defeat partition pruning on a table loaded in date order?
+  options:
+    - WHERE order_date = '2026-03-01'
+    - WHERE order_date BETWEEN '2026-03-01' AND '2026-03-07'
+    - WHERE TO_CHAR(order_date, 'YYYY-MM') = '2026-03'
+    - WHERE order_date IN ('2026-03-01', '2026-03-02')
+  answer: WHERE TO_CHAR(order_date, 'YYYY-MM') = '2026-03'
+  explanation: Wrapping the column in a function hides it from the min/max comparison. Simple comparisons, BETWEEN and IN prune well.
+
+- id: d1-store-008
+  type: mcq
+  concept: Clustering Keys
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: When does Snowflake recommend defining a clustering key?
+  options:
+    - On every table, at creation time
+    - On tables under 1 GB that are queried often
+    - On very large (multi-terabyte) tables frequently filtered or joined on a column that does not prune naturally
+    - Only on temporary tables
+  answer: On very large (multi-terabyte) tables frequently filtered or joined on a column that does not prune naturally
+  explanation: Natural load order already prunes most tables. Clustering costs credits continuously, so it is reserved for big tables with a clear filter column.
+
+- id: d1-store-009
+  type: tf
+  concept: Clustering Keys
+  tags: [day1, storage, billing]
+  difficulty: 2
+  prompt: Automatic Clustering runs on a virtual warehouse you must keep running.
+  answer: false
+  explanation: Automatic Clustering is serverless. It uses Snowflake-managed compute and bills credits with no warehouse of yours involved.
+
+- id: d1-wh-001
+  type: mcq
+  concept: Virtual Warehouse
+  tags: [day1, compute]
+  difficulty: 1
+  prompt: What is a virtual warehouse?
+  options:
+    - A database that stores a copy of your tables for fast access
+    - A named cluster of compute that executes queries and loads, holding no permanent data
+    - A region-level container for accounts
+    - The metadata service that plans queries
+  answer: A named cluster of compute that executes queries and loads, holding no permanent data
+  explanation: Warehouses are compute only. Dropping one loses no data; tables live in the storage layer.
+
+- id: d1-wh-002
+  type: mcq
+  concept: Virtual Warehouse
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: You create a warehouse through the Snowsight form without changing any defaults. What size do you get?
+  options:
+    - X-Small
+    - Small
+    - Medium
+    - X-Large
+  answer: X-Large
+  explanation: The Snowsight form defaults to X-Large, while CREATE WAREHOUSE in SQL defaults to X-Small. Check the size before clicking Create.
+
+- id: d1-wh-003
+  type: fill
+  concept: Warehouse Sizes and Credits
+  tags: [day1, compute, billing]
+  difficulty: 1
+  prompt: How many credits per hour does a Large warehouse consume? (number only)
+  answer: ["8", "eight", "8 credits"]
+  explanation: XS 1, S 2, M 4, L 8, XL 16. Each size doubles.
+
+- id: d1-wh-004
+  type: mcq
+  concept: Warehouse Sizes and Credits
+  tags: [day1, compute, billing]
+  difficulty: 3
+  prompt: A warehouse resumes, runs a 20-second query, suspends, resumes again and runs a 70-second query. How many seconds are billed in total?
+  options:
+    - "90"
+    - "120"
+    - "130"
+    - "140"
+  answer: "130"
+  explanation: Billing is per second with a 60-second minimum at each start. 20 s is billed as 60; 70 s is billed as 70; total 130.
+
+- id: d1-wh-005
+  type: fill
+  concept: Auto-suspend and Auto-resume
+  tags: [day1, compute]
+  difficulty: 1
+  prompt: What is the default AUTO_SUSPEND value in seconds for CREATE WAREHOUSE? (number only)
+  answer: ["600", "600 seconds", "600s"]
+  explanation: 600 seconds, ten minutes. Setting 0 or NULL disables auto-suspend.
+
+- id: d1-wh-006
+  type: mcq
+  concept: Auto-suspend and Auto-resume
+  tags: [day1, compute]
+  difficulty: 3
+  prompt: A BI warehouse serves the same dashboard queries all morning. Its auto-suspend is 60 seconds and users complain the first refresh after each pause is slow. What is the best change?
+  options:
+    - Disable auto-resume so the warehouse never restarts
+    - Raise auto-suspend to about 10 minutes so the warehouse cache survives between refreshes
+    - Lower auto-suspend to 10 seconds to save more credits
+    - Scale the warehouse up two sizes
+  answer: Raise auto-suspend to about 10 minutes so the warehouse cache survives between refreshes
+  explanation: Suspending drops the warehouse cache, and each resume costs a 60-second minimum. For repeated BI queries a longer timeout is both faster and often cheaper.
+
+- id: d1-wh-007
+  type: mcq
+  concept: Scaling Up vs Scaling Out
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: Query History shows dashboard queries each running in 2 seconds but spending 40 seconds queued at 9 a.m. What should you do?
+  options:
+    - Scale up to a larger warehouse size
+    - Scale out with a multi-cluster warehouse
+    - Add a clustering key to the fact table
+    - Disable the result cache
+  answer: Scale out with a multi-cluster warehouse
+  explanation: Long queued time with short execution time is a concurrency problem. Extra clusters absorb the queue; a bigger size would not.
+
+- id: d1-wh-008
+  type: tf
+  concept: Scaling Up vs Scaling Out
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: Resizing a running warehouse cancels the queries currently executing on it.
+  answer: false
+  explanation: Running queries finish on their existing resources. Queued and new queries use the new size.
+
+- id: d1-wh-009
+  type: mcq
+  concept: Multi-cluster Warehouse
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: A warehouse has MIN_CLUSTER_COUNT = 3 and MAX_CLUSTER_COUNT = 3. Which mode is it in?
+  options:
+    - Auto-scale
+    - Maximized
+    - Economy
+    - Standard
+  answer: Maximized
+  explanation: Min equal to max (and greater than 1) is Maximized mode; all clusters run whenever the warehouse runs. Min less than max is Auto-scale. Standard and Economy are scaling policies, not modes.
+
+- id: d1-wh-010
+  type: multi
+  concept: Multi-cluster Warehouse
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: Which statements about multi-cluster warehouses are true?
+  options:
+    - They require Enterprise edition or higher
+    - The Economy scaling policy starts a new cluster only when there is at least about 6 minutes of queued work
+    - Each query is split across all running clusters
+    - Credits per hour equal the size's credits times the number of running clusters
+  answer: [They require Enterprise edition or higher, The Economy scaling policy starts a new cluster only when there is at least about 6 minutes of queued work, Credits per hour equal the size's credits times the number of running clusters]
+  explanation: Queries are routed to one cluster each, not split. Clusters are identical copies of the warehouse.
+
+- id: d1-cache-001
+  type: multi
+  concept: Caching
+  tags: [day1, compute]
+  difficulty: 1
+  prompt: Which caches live in the Cloud Services layer?
+  options:
+    - Result cache
+    - Warehouse cache
+    - Metadata cache
+  answer: [Result cache, Metadata cache]
+  explanation: The warehouse cache is on each warehouse's local disk and is dropped on suspend; the other two live in Cloud Services and survive.
+
+- id: d1-cache-002
+  type: mcq
+  concept: Result Cache
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: A query result was first produced on Monday. Someone reruns the identical query every day. When is the cached result finally purged?
+  options:
+    - 24 hours after Monday's run regardless of reuse
+    - After 7 days
+    - 31 days after the first execution, even though it keeps being reused
+    - Never, as long as it is reused daily
+  answer: 31 days after the first execution, even though it keeps being reused
+  explanation: Each reuse resets the 24-hour window, but only up to 31 days from first execution.
+
+- id: d1-cache-003
+  type: mcq
+  concept: Result Cache
+  tags: [day1, compute]
+  difficulty: 3
+  prompt: You run SELECT COUNT(*) FROM orders WHERE region = 'EU' twice in a row with no data changes. The second run is instant. Which cache served it?
+  options:
+    - Warehouse cache
+    - Metadata cache
+    - Result cache
+    - No cache; the query is simply fast
+  answer: Result cache
+  explanation: Identical text on unchanged data is a result cache hit, served by Cloud Services. The metadata cache cannot answer a filtered COUNT.
+
+- id: d1-cache-004
+  type: tf
+  concept: Warehouse Cache
+  tags: [day1, compute]
+  difficulty: 1
+  prompt: Suspending a warehouse drops its local warehouse cache.
+  answer: true
+  explanation: The cache lives on the warehouse's local disk and exists only while it runs. Downsizing also drops the part held by removed nodes.
+
+- id: d1-cache-005
+  type: mcq
+  concept: Metadata Cache
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: Which of these queries can Snowflake answer from metadata alone, with the warehouse suspended?
+  options:
+    - SELECT COUNT(*) FROM orders
+    - SELECT COUNT(*) FROM orders WHERE region = 'EU'
+    - SELECT region, COUNT(*) FROM orders GROUP BY region
+    - SELECT AVG(amount) FROM orders
+  answer: SELECT COUNT(*) FROM orders
+  explanation: Whole-table COUNT(*), MIN and MAX come from micro-partition metadata. Filters, GROUP BY and AVG need a warehouse.
+
+- id: d1-plat-001
+  type: mcq
+  concept: Snowflake Editions
+  tags: [day1, platform]
+  difficulty: 1
+  prompt: Which is the correct list of Snowflake editions, lowest to highest?
+  options:
+    - Basic, Pro, Enterprise, Ultimate
+    - Standard, Enterprise, Business Critical, Virtual Private Snowflake
+    - Standard, Premium, Enterprise, Government
+    - Developer, Team, Enterprise, VPS
+  answer: Standard, Enterprise, Business Critical, Virtual Private Snowflake
+  explanation: Each edition includes everything below it. Business Critical was formerly called Enterprise for Sensitive Data.
+
+- id: d1-plat-002
+  type: multi
+  concept: Snowflake Editions
+  tags: [day1, platform]
+  difficulty: 2
+  prompt: Which features require Enterprise edition or higher?
+  options:
+    - Multi-cluster warehouses
+    - Time Travel up to 90 days
+    - Secure data sharing
+    - Materialized views
+    - Fail-safe
+  answer: [Multi-cluster warehouses, Time Travel up to 90 days, Materialized views]
+  explanation: Secure data sharing and the 7-day Fail-safe are available on every edition, including Standard.
+
+- id: d1-plat-003
+  type: tf
+  concept: Cloud Providers and Regions
+  tags: [day1, platform]
+  difficulty: 1
+  prompt: A single Snowflake account can span two cloud regions to keep data close to users in both.
+  answer: false
+  explanation: An account lives in exactly one region of one cloud. Multi-region means several accounts linked by replication or sharing.
+
+- id: d1-plat-004
+  type: fill
+  concept: Cloud Providers and Regions
+  tags: [day1, platform]
+  difficulty: 2
+  prompt: In Snowflake billing, is data ingress (loading data in) charged or free? (one word)
+  answer: ["free", "not charged", "free of charge"]
+  explanation: Ingress is free. Egress, data leaving the region or cloud, is charged as data transfer.
+
+- id: d1-plat-005
+  type: mcq
+  concept: Organizations and Accounts
+  tags: [day1, platform]
+  difficulty: 2
+  prompt: Which role is used to create new accounts within an organization?
+  options:
+    - ACCOUNTADMIN
+    - SYSADMIN
+    - ORGADMIN
+    - SECURITYADMIN
+  answer: ORGADMIN
+  explanation: ORGADMIN (or GLOBALORGADMIN in newer multi-account organizations) works at the organization level. ACCOUNTADMIN is the top role inside one account.
+
+- id: d1-plat-006
+  type: mcq
+  concept: Snowsight
+  tags: [day1, platform]
+  difficulty: 1
+  prompt: Where in Snowsight do you find Query Profile for a past query?
+  options:
+    - Admin → Warehouses
+    - Monitoring → Query History, then open the query
+    - Data → Databases
+    - Projects → Dashboards
+  answer: Monitoring → Query History, then open the query
+  explanation: Query History lists every query; opening one shows the Query Profile tab with partitions scanned, cache hits and spilling.
+
+- id: d1-plat-007
+  type: multi
+  concept: Credits and Billing
+  tags: [day1, platform, billing]
+  difficulty: 1
+  prompt: Which are the three cost categories on a Snowflake bill?
+  options:
+    - Compute
+    - Storage
+    - Data transfer
+    - Number of users
+    - Number of queries
+  answer: [Compute, Storage, Data transfer]
+  explanation: Compute (warehouses, serverless, cloud services excess), storage per compressed TB, and egress. Users and query counts are not billed.
+
+- id: d1-plat-008
+  type: mcq
+  concept: Credits and Billing
+  tags: [day1, platform, billing]
+  difficulty: 2
+  prompt: Snowpipe loaded files all night while every warehouse was suspended. Which line of the bill does that appear on?
+  options:
+    - It is free because no warehouse ran
+    - Compute, as serverless credits
+    - Storage
+    - Data transfer
+  answer: Compute, as serverless credits
+  explanation: Serverless features (Snowpipe, Automatic Clustering, serverless tasks) use Snowflake-managed compute and bill credits without a warehouse of yours.
+
+- id: d1-mig-001
+  type: mcq
+  concept: Virtual Warehouse
+  tags: [day1, migration, compute]
+  difficulty: 2
+  prompt: On Cloudera your team kept a Spark cluster running all night so the 6 a.m. job would start instantly. What is the Snowflake way?
+  options:
+    - Keep a warehouse running all night with AUTO_SUSPEND = 0
+    - Leave the warehouse suspended with AUTO_RESUME on; it starts in seconds when the job's first statement arrives
+    - Create the warehouse at 5:59 a.m. with a task
+    - Pre-load the tables into the warehouse the evening before
+  answer: Leave the warehouse suspended with AUTO_RESUME on; it starts in seconds when the job's first statement arrives
+  explanation: A suspended warehouse costs nothing and resumes automatically. Warehouses hold no data, so there is nothing to pre-load.
+
+- id: d1-mig-002
+  type: mcq
+  concept: Micro-partitions
+  tags: [day1, migration, storage]
+  difficulty: 2
+  prompt: Your Hive tables were PARTITIONED BY (dt) and you ran MSCK REPAIR TABLE after each load. What replaces this in Snowflake?
+  options:
+    - CREATE TABLE ... PARTITION BY (dt) and ALTER TABLE ... RECOVER PARTITIONS
+    - Nothing to declare; micro-partitioning is automatic and metadata is written with every load
+    - A clustering key on dt, mandatory for every table
+    - An external table pointing at the Hive directories
+  answer: Nothing to declare; micro-partitioning is automatic and metadata is written with every load
+  explanation: Snowflake partitions every table itself in load order and prunes on any column. Clustering keys are an optional tuning step for multi-TB tables.
+
+- id: d1-mig-003
+  type: mcq
+  concept: Cloud Services Layer
+  tags: [day1, migration, architecture]
+  difficulty: 2
+  prompt: Which Snowflake component takes over the jobs of the Hive Metastore, Ranger, and the YARN ResourceManager together?
+  options:
+    - The virtual warehouse
+    - The Cloud Services layer
+    - The Database Storage layer
+    - Snowsight
+  answer: The Cloud Services layer
+  explanation: Metadata, access control and resource management all live in Cloud Services, which additionally holds per-partition statistics and the result cache.
+
+- id: d1-mig-004
+  type: mcq
+  concept: Database Storage Layer
+  tags: [day1, migration, storage]
+  difficulty: 2
+  prompt: On Cloudera you copied a table's Parquet files with hdfs dfs -get to hand them to another system. What is the Snowflake equivalent for getting data out as files?
+  options:
+    - Download the micro-partitions from the cloud bucket
+    - COPY INTO a stage (unload), then fetch the files from the stage or cloud storage
+    - SELECT * and screenshot the result
+    - Ask Snowflake support for the files
+  answer: COPY INTO a stage (unload), then fetch the files from the stage or cloud storage
+  explanation: Snowflake-managed storage is not file-accessible. Data leaves through SQL, unloading to a stage, or sharing (Day 2 covers unloading in detail).
+
+- id: d1-mig-005
+  type: mcq
+  concept: Metadata Cache
+  tags: [day1, migration, compute]
+  difficulty: 2
+  prompt: In Hive you ran ANALYZE TABLE ... COMPUTE STATISTICS so row counts would be accurate. What do you run in Snowflake?
+  options:
+    - ANALYZE TABLE as well
+    - ALTER TABLE ... REFRESH STATISTICS
+    - Nothing; statistics are written with the data on every load and DML
+    - A nightly task that recomputes counts
+  answer: Nothing; statistics are written with the data on every load and DML
+  explanation: Micro-partition metadata is always current, which is why whole-table COUNT(*) is instant and pruning needs no maintenance.
