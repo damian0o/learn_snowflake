@@ -27,7 +27,9 @@ class SessionResult:
 
 def format_question(index: int, total: int, p: Presented) -> str:
     q = p.question
-    lines = ["Q%d/%d  [%s]" % (index, total, q.concept), q.prompt]
+    # The concept name is deliberately not shown here: it would give the answer away.
+    # It appears after the answer, in the Read: line.
+    lines = ["Q%d/%d" % (index, total), q.prompt]
     if q.type in ("mcq", "multi"):
         lines.extend("  %s) %s" % (LETTERS[i], opt) for i, opt in enumerate(p.options))
         if q.type == "multi":

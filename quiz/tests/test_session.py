@@ -51,10 +51,11 @@ def run(questions, answers, vault, progress=None, seed=1):
     return res, out, progress
 
 
-def test_format_question_shows_index_concept_and_options(questions):
+def test_format_question_shows_index_and_options_but_hides_concept(questions):
     p = present(questions[0], random.Random(1))
     text = format_question(2, 3, p)
-    assert text.startswith("Q2/3  [Alpha]\nPrompt for d1-a-001\n")
+    assert text.startswith("Q2/3\nPrompt for d1-a-001\n")
+    assert "Alpha" not in text  # the concept name would give the answer away
     assert "  a) " in text and "  b) " in text and "  c) " in text
     assert "(t/f)" in format_question(1, 1, present(questions[1], random.Random(1)))
     assert "(type your answer)" in format_question(1, 1, present(questions[2], random.Random(1)))
@@ -103,6 +104,8 @@ def test_wrong_answer_prints_explanation_and_read_path(vault):
     assert "Because d1-a-001." in text
     assert "Read: vault/Concepts/Alpha.md" in text
     assert "Missed concepts: Alpha" in text
+    header = out[0]
+    assert "Alpha" not in header
     assert res.missed_ids == ["d1-a-001"] and progress["d1-a-001"].box == 1
 
 

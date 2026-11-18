@@ -19,7 +19,7 @@ ALTER WAREHOUSE WH_BI_M RESUME;
 ```
 
 - `AUTO_SUSPEND = <seconds>`: the warehouse suspends after that long with no activity. Default **600** (10 minutes). `0` or `NULL` disables auto-suspend (it never sleeps; avoid). Snowflake checks roughly every 30 seconds, so the real delay is a little longer than the setting.
-- `AUTO_RESUME = TRUE` (default): any statement that needs the warehouse starts it. With `FALSE` you must resume by hand and queries wait with an error.
+- `AUTO_RESUME = TRUE` (default): any statement that needs the warehouse starts it. With `FALSE` you must resume by hand; until then statements that need the warehouse fail with an error.
 - Multi-cluster: auto-suspend applies to the whole warehouse once only the minimum clusters remain and they are idle; auto-resume starts it when no cluster is running.
 
 Choosing the timeout is a trade between credits and the [[Warehouse Cache]], which is dropped on suspend:

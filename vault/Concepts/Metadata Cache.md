@@ -16,7 +16,7 @@ Every [[Micro-partitions|micro-partition]] carries metadata maintained by [[Clou
 
 What it does for you:
 
-- **Answers whole-table aggregates without compute.** `SELECT COUNT(*) FROM t`, `SELECT MIN(order_date), MAX(order_date) FROM t` can be served from metadata alone; the warehouse can stay suspended and no credits are spent. Add a `WHERE` or a `GROUP BY` and the query runs normally.
+- **Answers whole-table aggregates without compute.** `SELECT COUNT(*) FROM t`, `SELECT MIN(order_date), MAX(order_date) FROM t` can be served from metadata alone for most data types; the warehouse can stay suspended and no credits are spent. Add a `WHERE` or a `GROUP BY` and the query runs normally.
 - **Drives [[Query Pruning]].** The optimizer compares predicates with per-partition min/max to decide which partitions to read.
 - **Serves `SHOW` and `DESCRIBE`.** Object listings and schemas come from metadata, never from a warehouse.
 

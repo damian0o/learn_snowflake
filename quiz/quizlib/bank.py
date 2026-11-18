@@ -1,5 +1,5 @@
 """Question bank loading. Banks are YAML lists of question mappings."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List
 
@@ -20,6 +20,16 @@ class Question:
     source: str = ""
 
 
+def _keep_list(value: Any) -> Any:
+    """Return [] for None, a copy for lists, and anything else unchanged so lint can reject it
+    (list("day1") would silently become ['d', 'a', 'y', '1'])."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return list(value)
+    return value
+
+
 def _to_question(raw: Any, source: str) -> Question:
     if not isinstance(raw, dict):
         raise ValueError("%s: each question must be a mapping, got %r" % (source, type(raw).__name__))
@@ -27,10 +37,10 @@ def _to_question(raw: Any, source: str) -> Question:
         id=str(raw.get("id", "")),
         type=str(raw.get("type", "")),
         concept=str(raw.get("concept", "")),
-        tags=list(raw.get("tags") or []),
+        tags=_keep_list(raw.get("tags")),
         difficulty=raw.get("difficulty", 0),
         prompt=raw.get("prompt", ""),
-        options=list(raw.get("options") or []),
+        options=_keep_list(raw.get("options")),
         answer=raw.get("answer"),
         explanation=raw.get("explanation", ""),
         source=source,

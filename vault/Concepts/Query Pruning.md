@@ -28,7 +28,7 @@ When a huge table is filtered on a column that does not prune, [[Clustering Keys
 
 ## Gotchas / exam traps
 
-- Pruning happens before execution, in Cloud Services, using metadata only. No warehouse time is spent on skipped partitions.
+- Pruning happens primarily at compile time, in Cloud Services, using metadata only; some further pruning (for example from join filters) happens at run time on the warehouse. No warehouse time is spent on partitions skipped at compile time.
 - Functions on the filtered column, `LIKE '%x'`, and comparing columns of different types tend to defeat pruning.
 - "Partitions scanned" much lower than "Partitions total" in Query Profile is the evidence that pruning worked.
 

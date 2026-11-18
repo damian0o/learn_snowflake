@@ -60,7 +60,7 @@ def test_n_larger_than_bank_asks_all(env):
 
 def test_tag_filter_limits_questions(env):
     code, out, err = run(env, ["day1", "--tag", "storage"], stdin="t\n")
-    assert code == 0 and "Q1/1  [Beta]" in out
+    assert code == 0 and "Q1/1\nBeta is true." in out
 
 
 def test_no_match_exits_cleanly(env):
@@ -99,9 +99,9 @@ def test_review_puts_box1_first(env):
     data = json.loads(env["progress"].read_text())
     missed = [k for k, v in data["cards"].items() if v["box"] == 1][0]
     code, out, err = run(env, ["review", "--seed", "1"], stdin="t\nt\n")
-    first = out.split("Q1/")[1].split("\n")[0]
+    first_prompt = out.split("Q1/")[1].split("\n")[1]
     concept = "Alpha" if missed == "d1-a-001" else "Beta"
-    assert concept in first
+    assert first_prompt == "%s is true." % concept
 
 
 def test_eof_mid_session_saves_partial(env):

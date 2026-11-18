@@ -84,3 +84,11 @@ def test_concept_notes_reads_frontmatter_tags(tmp_path):
     (tmp_path / "Concepts" / "C.md").write_text("# C\nno frontmatter\n")
     (tmp_path / "Other.md").write_text("---\ntags: [concept]\n---\n")
     assert concept_notes(tmp_path) == {"A": {"concept", "day1"}, "Naming - B": {"convention"}, "C": set()}
+
+
+def test_scalar_tags_and_options_rejected():
+    errs = lint_bank([mk(tags="day1"), mk(id="d1-arch-002", options="A, B, C", concept="Cloud Services Layer")], NOTES, day=None)
+    joined = "\n".join(errs)
+    assert "d1-arch-001: tags must be a list" in joined
+    assert "d1-arch-002: options must be a list" in joined
+    assert "option 1 is not a string" not in joined  # no per-character noise

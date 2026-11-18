@@ -43,7 +43,7 @@ CREATE WAREHOUSE WH_LEARN_XS
   COMMENT = 'Personal learning warehouse';
 ```
 
-The name follows the standard you will meet on [[Day 3]]: `WH_<TEAM>_<SIZE>`.
+The name is a shortened form of the standard you will meet on [[Day 3]], `WH_<TEAM>_<PURPOSE>_<SIZE>`, with the purpose dropped because this personal warehouse has only one.
 
 ## Related
 

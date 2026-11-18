@@ -31,7 +31,7 @@ Why are micro-partitions called immutable, and what follows from it?
 ?
 They are never edited in place; DML writes new micro-partitions and retires old ones. That is what makes Time Travel, Fail-safe and zero-copy cloning cheap. [[Micro-partitions]]
 
-What is query pruning and where does it happen?::Skipping micro-partitions whose min/max metadata proves they cannot match the predicate. It happens in Cloud Services before execution, using metadata only. [[Query Pruning]]
+What is query pruning and where does it happen?::Skipping micro-partitions whose min/max metadata proves they cannot match the predicate. It happens primarily at compile time in Cloud Services, using metadata only. [[Query Pruning]]
 
 Where in Snowsight do you prove that pruning worked?::Query Profile, TableScan node: *Partitions scanned* versus *Partitions total*. A small ratio means good pruning. [[Query Pruning]]
 

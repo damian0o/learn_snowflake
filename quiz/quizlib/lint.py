@@ -53,7 +53,9 @@ def _lint_question(q: Question, notes: Dict[str, Set[str]]) -> List[str]:
         e("type '%s' is not one of %s" % (q.type, ", ".join(TYPES)))
     if q.difficulty not in (1, 2, 3):
         e("difficulty must be 1, 2 or 3")
-    if not q.tags or not all(_is_str(t) for t in q.tags):
+    if not isinstance(q.tags, list):
+        e("tags must be a list, e.g. [day1, compute]")
+    elif not q.tags or not all(_is_str(t) for t in q.tags):
         e("tags must be a non-empty list of strings")
     if not _is_str(q.prompt):
         e("prompt is empty")
@@ -61,6 +63,9 @@ def _lint_question(q: Question, notes: Dict[str, Set[str]]) -> List[str]:
         e("explanation is empty")
     if q.concept not in notes:
         e("concept '%s' has no note in Concepts/ or Conventions/" % q.concept)
+    if not isinstance(q.options, list):
+        e("options must be a list")
+        return errs
     for i, opt in enumerate(q.options):
         if not _is_str(opt):
             e("option %d is not a string (%r); quote it in YAML" % (i + 1, opt))

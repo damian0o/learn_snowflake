@@ -38,3 +38,11 @@ def test_load_bank_concatenates_and_rejects_non_list(tmp_bank):
         load_bank([tmp_bank / "x.yaml"])
     (tmp_bank / "y.yaml").write_text("[]")
     assert len(load_bank([tmp_bank / "day1.yaml", tmp_bank / "y.yaml"])) == 4
+
+
+def test_scalar_tags_and_options_are_kept_as_is_not_split(tmp_bank):
+    (tmp_bank / "bad.yaml").write_text(
+        "- {id: d1-a-001, type: mcq, concept: C, tags: day1, difficulty: 1, prompt: p, options: 'a, b, c', answer: a, explanation: e}\n")
+    q = load_named(tmp_bank, "bad")[0]
+    assert q.tags == "day1"
+    assert q.options == "a, b, c"
