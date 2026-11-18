@@ -7,5 +7,15 @@ services:
     volumes:
       - ./quiz/results:/app/quiz/results   # scores persist on the host
       - ./quiz/bank:/app/quiz/bank:ro      # edit questions without rebuilding
-      - ./vault:/app/vault:ro              # lint and Read: paths see the live vault
-    # usage: docker compose run --rm quiz day1 | review | stats | lint
+    # usage: docker compose run --rm quiz day1 | review | stats
+
+  checks:
+    build:
+      context: .
+      dockerfile: checks/Dockerfile
+    image: learn-snowflake-checks
+    volumes:
+      - ./quiz:/app/quiz:ro
+      - ./tools:/app/tools:ro
+      - ./vault:/app/vault:ro
+    # usage: docker compose run --rm checks

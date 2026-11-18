@@ -15,9 +15,8 @@ pip install -r quiz/requirements.txt
 | `python3 quiz/quiz.py day1 --n 10 --tag migration` | A subset: at most 10 questions, only those tagged `migration` |
 | `python3 quiz/quiz.py review` | Re-asks what you got wrong (Leitner boxes, below) |
 | `python3 quiz/quiz.py stats` | Accuracy per day, your five weakest concepts with the note to reread, box distribution |
-| `python3 quiz/quiz.py lint` | Checks the question bank itself; used by the author |
 
-**Docker instead of local Python:** `docker compose run --rm quiz day1` (and `review`, `stats`, `lint`) from the repository root. The first run builds the image; scores still land in `quiz/results/`.
+**Docker instead of local Python:** `docker compose run --rm quiz day1` (and `review`, `stats`) from the repository root. The first run builds the image; scores still land in `quiz/results/`.
 
 Answer multiple choice with a letter (`b`), multi-select with all the letters (`ac`), true/false with `t` or `f`, and fill-in questions with a short answer (case and punctuation do not matter). Press `Ctrl+D` to stop early; answered questions are saved.
 
@@ -28,6 +27,10 @@ Answer multiple choice with a letter (`b`), multi-select with all the letters (`
 Every question sits in one of three boxes. New and missed questions are in box 1. Each correct answer moves a question up one box; a wrong answer sends it back to box 1. `review` asks box 1 first, then box 2, then a handful from box 3 so known things are not forgotten. This is the same idea as the flashcards in [[Obsidian Setup]], applied to test questions.
 
 Results are stored in `quiz/results/progress.json` (ignored by git). Delete that file to start over.
+
+## Checks (author side)
+
+The question bank and the vault have their own quality gate, separate from the quiz: `checks/run.sh` at the repository root (or `docker compose run --rm checks`) runs the tests, the vault link checker and the bank lint. Lint verifies every question's type, answer and concept link and that every concept note has a question. You only need it if you edit questions or notes.
 
 ## Related
 

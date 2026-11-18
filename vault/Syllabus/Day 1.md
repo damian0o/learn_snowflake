@@ -88,7 +88,7 @@ Tick these off, then tick "Day 1" on [[00 Home]]:
 - [ ] The vault opens in Obsidian and the graph shows seven colour groups.
 - [ ] The Spaced Repetition deck `day1` lists about 65 cards.
 - [ ] `python3 quiz/quiz.py day1` runs end to end and shows a score.
-- [ ] `python3 tools/check_links.py` and `python3 quiz/quiz.py lint` print no problems.
+- [ ] `checks/run.sh` (or `docker compose run --rm checks`) ends with "all checks passed".
 - [ ] The hands-on steps worked, or you noted which step differed from the description.
 - [ ] Quiz score of 80 % or better.
 
