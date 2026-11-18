@@ -17,6 +17,8 @@ pip install -r quiz/requirements.txt
 | `python3 quiz/quiz.py stats` | Accuracy per day, your five weakest concepts with the note to reread, box distribution |
 | `python3 quiz/quiz.py lint` | Checks the question bank itself; used by the author |
 
+**Docker instead of local Python:** `docker compose run --rm quiz day1` (and `review`, `stats`, `lint`) from the repository root. The first run builds the image; scores still land in `quiz/results/`.
+
 Answer multiple choice with a letter (`b`), multi-select with all the letters (`ac`), true/false with `t` or `f`, and fill-in questions with a short answer (case and punctuation do not matter). Press `Ctrl+D` to stop early; answered questions are saved.
 
 **Pass bar:** 80 %. Below that, run `review` until the missed questions come back right, reread the notes it points at, then take the day's quiz again.

@@ -1,0 +1,11 @@
+services:
+  quiz:
+    build: .
+    image: learn-snowflake-quiz
+    stdin_open: true   # the quiz reads your answers
+    tty: true
+    volumes:
+      - ./quiz/results:/app/quiz/results   # scores persist on the host
+      - ./quiz/bank:/app/quiz/bank:ro      # edit questions without rebuilding
+      - ./vault:/app/vault:ro              # lint and Read: paths see the live vault
+    # usage: docker compose run --rm quiz day1 | review | stats | lint

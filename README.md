@@ -19,6 +19,16 @@ docs/         design specs and implementation plans
 3. Install the quiz runner: `pip install -r quiz/requirements.txt`
 4. Start Day 1: open `vault/Syllabus/Day 1.md`, and when told, run `python3 quiz/quiz.py day1`.
 
+## Run the quiz in Docker
+
+No local Python needed. From the repo root:
+
+```
+docker compose run --rm quiz day1      # also: review | stats | lint
+```
+
+The first run builds the image. Scores persist in `quiz/results/` on the host; the question bank and vault are mounted read-only, so edits apply without a rebuild.
+
 ## Checks
 
 ```
