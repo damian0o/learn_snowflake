@@ -1,0 +1,72 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:Concepts",
+      "color": {
+        "a": 1,
+        "rgb": 4886754
+      }
+    },
+    {
+      "query": "path:Conventions",
+      "color": {
+        "a": 1,
+        "rgb": 5025616
+      }
+    },
+    {
+      "query": "path:Flashcards",
+      "color": {
+        "a": 1,
+        "rgb": 16766720
+      }
+    },
+    {
+      "query": "path:Syllabus",
+      "color": {
+        "a": 1,
+        "rgb": 15158332
+      }
+    },
+    {
+      "query": "path:Memory",
+      "color": {
+        "a": 1,
+        "rgb": 10181046
+      }
+    },
+    {
+      "query": "path:Setup",
+      "color": {
+        "a": 1,
+        "rgb": 9868950
+      }
+    },
+    {
+      "query": "path:Migration",
+      "color": {
+        "a": 1,
+        "rgb": 16750592
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.2,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.45,
+  "repelStrength": 12,
+  "linkStrength": 1,
+  "linkDistance": 220,
+  "scale": 1,
+  "close": false
+}

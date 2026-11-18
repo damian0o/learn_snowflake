@@ -1,0 +1,8 @@
+quiz/results/
+__pycache__/
+.pytest_cache/
+*.pyc
+vault/.obsidian/workspace.json
+vault/.obsidian/workspace-mobile.json
+vault/.obsidian/cache
+.DS_Store
