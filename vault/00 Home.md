@@ -7,6 +7,7 @@ A three-day foundation in Snowflake for a data engineer moving a team off Cloude
 
 ## Start here
 
+0. [[Roadmap]] - the three phases and where we are
 1. [[Obsidian Setup]] - plugin, graph colours, how flashcards work
 2. [[Snowflake Account]] - which account to practise on
 3. [[Quiz Runner]] - the interactive tests in your terminal
