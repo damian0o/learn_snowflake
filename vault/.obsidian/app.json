@@ -1,1 +1,8 @@
-{"alwaysUpdateLinks": true, "newFileLocation": "folder", "newFileFolderPath": "Concepts", "attachmentFolderPath": "Attachments", "useMarkdownLinks": false, "showFrontmatter": true}
+{
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "Concepts",
+  "attachmentFolderPath": "Attachments",
+  "useMarkdownLinks": false,
+  "showFrontmatter": true
+}
