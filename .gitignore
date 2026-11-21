@@ -6,3 +6,6 @@ vault/.obsidian/workspace.json
 vault/.obsidian/workspace-mobile.json
 vault/.obsidian/cache
 .DS_Store
+
+# Local Quartz checkout when previewing the site
+_quartz/

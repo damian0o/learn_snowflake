@@ -8,6 +8,7 @@ Three phases, each with its own design document in `docs/superpowers/specs/`. Ph
 ## Where we are (19 Nov 2026)
 
 - Skeleton done and stable: vault, quiz runner, link checker, Docker images, checks gate, CI workflow.
+- Publishing prepared: the vault builds into a public website with Quartz via GitHub Actions and GitHub Pages (see the repo README). Goes live on the first push to GitHub.
 - [[Day 1]] content complete and reviewed. [[Day 2]] and [[Day 3]] are stubs.
 - Open verification: the Day 1 Snowsight hands-on steps have not been executed yet.
 
