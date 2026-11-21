@@ -1,4 +1,8 @@
 name: checks
+# Runs checks/run.sh (tests, vault links, bank lint) in the same Docker image
+# used locally with `docker compose run --rm checks`, so CI and laptops share
+# one Python version (python:3.9-slim) instead of depending on what the runner
+# image happens to ship.
 on:
   push:
   pull_request:
@@ -7,8 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
-      - run: pip install -r quiz/requirements.txt
-      - run: checks/run.sh
+      - run: docker compose build checks
+      - run: docker compose run --rm checks
