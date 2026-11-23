@@ -4,35 +4,65 @@ docs: https://docs.snowflake.com/en/user-guide/intro-regions
 ---
 # Cloud Providers and Regions
 
-**In one sentence:** Each Snowflake account lives in exactly one region of one cloud provider, AWS, Microsoft Azure or Google Cloud, and talks to other regions and clouds only through replication and sharing.
+One account lives in one region of one cloud (AWS, Azure or Google Cloud); storage and compute stay there, and every byte that leaves the region is metered as data transfer.
 
-**Why it matters:** The region decides latency to your sources and consumers, which features and warehouse sizes are available, data residency, and whether moving data costs egress fees.
+```mermaid
+flowchart TB
+  O[Organization] --> A1[Account A<br/>AWS · eu-central-1 · Enterprise]
+  O --> A2[Account B<br/>Azure · westeurope · Enterprise]
+  A1 -->|replication · cross-region share<br/>egress billed| A2
+  A1 -->|COPY INTO stage in another region / cloud<br/>egress billed| X[(external bucket)]
+  IN[loads from anywhere] -->|ingress free| A1
+```
 
-**Coming from Hadoop:** Your Cloudera cluster lived in one data centre, and so did its data. Same idea, but now the choice is a dropdown at sign-up, and the cloud provider's object storage replaces your racks. The analogy breaks because Snowflake can replicate a database to another region or another cloud with one command, something a second Hadoop cluster never made easy (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Providers | AWS, Microsoft Azure, Google Cloud; same SQL on all | intro-regions |
+| Region | one per account, fixed at creation | intro-regions |
+| Account identifier | `<orgname>-<account_name>` → `https://<orgname>-<account_name>.snowflakecomputing.com`; locator form (`xy12345.eu-central-1`) is legacy | [identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) |
+| Largest sizes | 5X-Large and 6X-Large on AWS and Azure only | [warehouses-overview](https://docs.snowflake.com/en/user-guide/warehouses-overview) |
+| Transfer | ingress free; egress to another region or cloud billed | [transfer cost](https://docs.snowflake.com/en/user-guide/cost-understanding-data-transfer) |
+| Transfer view | `DATA_TRANSFER_HISTORY`: `BYTES_TRANSFERRED`, `SOURCE_REGION`, `TARGET_CLOUD`, `TARGET_REGION`, `TRANSFER_TYPE` (`COPY`, `REPLICATION`, `EXTERNAL_ACCESS`, …); latency ≤ 120 min | [view](https://docs.snowflake.com/en/sql-reference/account-usage/data_transfer_history) |
 
 ## How it works
 
-- **Providers:** Amazon Web Services, Microsoft Azure, Google Cloud Platform. You choose one per account. The Snowflake experience is the same on all three; a few features and the largest warehouse sizes (5X-Large, 6X-Large) are AWS and Azure only.
-- **Region:** one per account, chosen at creation (for example AWS `eu-central-1` Frankfurt). Storage and compute for that account stay in that region. Regions do not limit who can log in, only where data sits.
-- **Account identifier:** `<orgname>-<account_name>`, used in URLs (`https://<orgname>-<account_name>.snowflakecomputing.com`) and in every driver and tool login. The legacy *account locator* (for example `xy12345.eu-central-1`) still works but is not recommended. See [[Organizations and Accounts]].
-- **Cross-region and cross-cloud:** databases can be replicated to accounts in other regions or clouds, and data can be shared across them. Both move bytes between regions, which incurs data transfer (egress) charges (see [[Credits and Billing]]).
+- Account → region → object storage and warehouse nodes provisioned there; users log in from anywhere.
+- Another region or cloud → another account ([[Organizations and Accounts]]), linked by replication or cross-region sharing, both moving bytes.
+- Unloading to a bucket in the same region and cloud → no transfer charge; elsewhere → charged.
+- Feeds to AEP, Pega and friends: put the account where the bulk of sources and consumers are, then measure `DATA_TRANSFER_HISTORY` after the first deliveries.
 
-For a team feeding external platforms, put the account in the region closest to the bulk of the sources and consumers, and expect to pay egress for anything that leaves the region.
+## Probe
 
-## Gotchas / exam traps
+```sql
+SELECT CURRENT_REGION(), CURRENT_ORGANIZATION_NAME(), CURRENT_ACCOUNT_NAME();   -- e.g. AWS_EU_CENTRAL_1
+SHOW REGIONS;
+SELECT source_region, target_cloud, target_region, transfer_type, SUM(bytes_transferred) AS bytes
+FROM SNOWFLAKE.ACCOUNT_USAGE.DATA_TRANSFER_HISTORY
+WHERE start_time >= DATEADD('day', -30, CURRENT_TIMESTAMP()) GROUP BY 1,2,3,4;
+```
 
-- One account, one cloud, one region. Multi-region means multiple accounts linked by replication.
-- Ingress (loading data into Snowflake) is free; egress out of the region is charged.
-- Account identifiers use the organisation name and account name; the locator is legacy.
+## Cost
+
+Egress bytes × provider rate → `DATA_TRANSFER_HISTORY.BYTES_TRANSFERRED`; Snowsight → Admin » Cost management » Consumption → Usage type = Data transfer.
+
+## Traps
+
+- One account = one cloud + one region; "multi-region" means several accounts.
+- Egress applies to unloads, replication, external access calls and cross-region shares, not to loading.
+- Use the `<orgname>-<account_name>` identifier in every driver; the locator still works but is legacy.
+
+**vs Cloudera:** one datacenter, free internal traffic → region choice is a cost decision for every outbound feed. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Organizations and Accounts]]
 - [[Credits and Billing]]
 - [[What Snowflake Is]]
-- [[Snowflake Editions]]
-- [[Snowflake Account]]
+- [[Warehouse Sizes and Credits]]
+- [[Database Storage Layer]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
