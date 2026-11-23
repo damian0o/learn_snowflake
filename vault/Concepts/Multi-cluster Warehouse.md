@@ -4,53 +4,70 @@ docs: https://docs.snowflake.com/en/user-guide/warehouses-multicluster
 ---
 # Multi-cluster Warehouse
 
-**In one sentence:** A multi-cluster warehouse is one warehouse that can run several identical clusters at once, starting and stopping them automatically to absorb concurrency, available on Enterprise edition and above.
+An Enterprise-edition warehouse that runs 1 to N identical clusters, adding one when statements queue and removing it when load drops, under a Standard or Economy policy.
 
-**Why it matters:** It is how a shared BI warehouse survives Monday morning without a human resizing it, and it is a favourite exam topic: modes, policies and the edition requirement.
+```mermaid
+flowchart LR
+  Q[incoming statements] --> C1[cluster 1 · Medium]
+  Q -->|queue forms| C2[cluster 2 · Medium]
+  Q -->|still queued| C3[cluster 3 · Medium]
+  C3 -. low load .-> OFF[shut down after running queries finish]
+  P{policy} -->|STANDARD: start on first queued statement| C2
+  P -->|ECONOMY: start only if ≥ 6 min of work| C2
+```
 
-**Coming from Hadoop:** Adding capacity to a YARN queue when jobs pile up, done automatically and reversed when the rush ends. The analogy breaks because each extra cluster is an exact copy of the warehouse that serves whole queries; work is not split across clusters, queries are routed to the least loaded one (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Edition | Enterprise or higher; Standard cannot set `MAX_CLUSTER_COUNT > 1` | multi-cluster page |
+| Modes | Maximized: `MIN = MAX > 1`, all clusters always on; Auto-scale: `MIN < MAX` | multi-cluster page |
+| Max clusters, Snowsight | 10 | multi-cluster page |
+| Max clusters, SQL by size | XS–M 300 · L 160 · XL 80 · 2XL 40 · 3XL 20 · 4XL–6XL 10 | multi-cluster page |
+| `SCALING_POLICY = STANDARD` (default) | starts a cluster when a statement queues or is estimated to; shuts the least-loaded down after a sustained period of low load | multi-cluster page |
+| `SCALING_POLICY = ECONOMY` | starts only if the estimated load keeps a cluster busy ≥ 6 min; marks a cluster for shutdown when < 6 min of work remain | multi-cluster page |
+| Credits | size credits × started clusters, per second | multi-cluster page |
 
 ## How it works
 
+- `CREATE WAREHOUSE … MIN_CLUSTER_COUNT = 1 MAX_CLUSTER_COUNT = 4 SCALING_POLICY = STANDARD`.
+- Statements exceed cluster 1's slots → queue → policy decides → cluster 2 starts (60 s minimum each) → queue drains.
+- Load falls → least-loaded cluster finishes its statements → shuts down → back to `MIN`.
+- Each cluster has its own SSD cache ([[Warehouse Cache]]); a new cluster starts cold.
+- Auto-suspend applies when every cluster is idle; resume brings back `MIN` clusters ([[Auto-suspend and Auto-resume]]).
+
+## Probe
+
 ```sql
-CREATE WAREHOUSE WH_BI_M
-  WAREHOUSE_SIZE = MEDIUM
-  MIN_CLUSTER_COUNT = 1
-  MAX_CLUSTER_COUNT = 4
-  SCALING_POLICY = STANDARD
-  AUTO_SUSPEND = 600;
+SHOW WAREHOUSES;     -- "min_cluster_count", "max_cluster_count", "started_clusters", "scaling_policy"
+ALTER WAREHOUSE WH_BI_M SET MAX_CLUSTER_COUNT = 3, SCALING_POLICY = ECONOMY;   -- Enterprise only
+SELECT start_time, avg_running, avg_queued_load
+FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_LOAD_HISTORY
+WHERE warehouse_name = 'WH_BI_M' ORDER BY start_time DESC LIMIT 24;   -- 5-min grain
 ```
 
-**Modes**
+Snowsight → Admin » Warehouses → cluster count and queued statements per warehouse.
 
-- **Maximized**: `MIN_CLUSTER_COUNT = MAX_CLUSTER_COUNT` (greater than 1). All clusters run whenever the warehouse runs. Predictable, expensive.
-- **Auto-scale**: `MIN < MAX`. Snowflake adds a cluster when queries queue and removes one when load drops.
+## Cost
 
-**Scaling policies** (auto-scale only)
+`WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` already sums all clusters; a Medium at 4 clusters bills up to 16 credits/hour. Economy trades queue time for fewer cluster starts.
 
-| Policy | Starts a cluster | Shuts one down |
-|--------|------------------|----------------|
-| Standard (default) | immediately when a query queues; minimises waiting | after 2 to 3 consecutive checks show the load could move to other clusters |
-| Economy | only if there is enough queued work to keep a cluster busy for at least 6 minutes; saves credits, tolerates queueing | after 5 to 6 consecutive checks |
+## Traps
 
-**Limits.** Snowsight lets you set up to 10 clusters. SQL allows more, depending on size (300 for X-Small to Medium, down to 10 for 4X-Large and above). Cost is size credits times running clusters: a Medium at 4 clusters bills up to 16 credits per hour.
+- Standard edition: `MAX_CLUSTER_COUNT` stays 1; the parameters exist but cannot exceed it.
+- `MIN = MAX` is maximized mode and bills every cluster whenever the warehouse is started.
+- UI caps at 10 clusters; SQL allows up to 300 for small sizes.
 
-Multi-cluster warehouses are the **scale out** answer in [[Scaling Up vs Scaling Out]].
-
-## Gotchas / exam traps
-
-- Enterprise edition or higher. On Standard edition `MAX_CLUSTER_COUNT` cannot exceed 1.
-- Maximized means min equals max; auto-scale means min is less than max. Both are set with the same two parameters.
-- Scaling policies are Standard and Economy. Economy trades some queueing for fewer credits.
+**vs Cloudera:** YARN queue capacity shared by every job → identical isolated clusters added per queue depth and removed when it drains. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
-- [[Virtual Warehouse]]
 - [[Scaling Up vs Scaling Out]]
-- [[Snowflake Editions]]
+- [[Virtual Warehouse]]
 - [[Warehouse Sizes and Credits]]
+- [[Snowflake Editions]]
 - [[Auto-suspend and Auto-resume]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
