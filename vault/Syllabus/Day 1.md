@@ -3,83 +3,110 @@ tags: [syllabus, day1]
 ---
 # Day 1 - The big picture
 
-Today you learn what Snowflake is made of and how it bills you. By the end you can explain the three layers, size a warehouse, and say why a query that took eight seconds a minute ago now takes none.
+By the end: trace a query through the three layers, size and schedule a warehouse, read Query Profile for pruning, caching and spilling, and say where every credit of today's session is recorded.
 
-**Rhythm (about 3 hours):** read the notes below in order (60 to 90 min) → hands-on in Snowsight (45 min) → flashcards deck `day1` (15 min) → `python3 quiz/quiz.py day1` (20 min) → fill in the "Explain it to a teammate" box at the bottom of each note (10 min).
+**Rhythm (about 3 hours):** notes in order (60 to 90 min) → hands-on in Snowsight (45 min) → flashcards deck `day1` (15 min) → `docker compose run --rm quiz day1` (20 min) → "Explain it to a teammate" on five notes (10 min).
 
 Before you start: [[Obsidian Setup]], [[Snowflake Account]], [[Quiz Runner]].
 
+## One query, three layers
+
+```mermaid
+flowchart LR
+  C[client · Snowsight / driver] -->|SQL| CS
+  subgraph CS[Cloud Services · 10 % rule]
+    direction TB
+    A[auth · RBAC] --> P[parse · optimise] --> PR[prune by micro-partition min/max] --> RR{result reuse?<br/>metadata only?}
+  end
+  RR -->|yes| OUT[result · 0 warehouse credits]
+  RR -->|no| WH
+  subgraph WH[virtual warehouse · credits/second × size × clusters · 60 s minimum]
+    direction TB
+    SSD[(node SSD cache)] --> X[MPP scan · join · spill?]
+  end
+  WH -->|surviving micro-partitions, referenced columns| ST[(storage · micro-partitions 50–500 MB<br/>TB-month compressed)]
+  X --> OUT2[result · persisted 24 h in Cloud Services]
+```
+
 ## Read in this order
 
-**Architecture (the shape of the thing)**
-1. [[What Snowflake Is]]
-2. [[Three-Layer Architecture]]
-3. [[Cloud Services Layer]]
-4. [[Compute Layer]]
-5. [[Database Storage Layer]]
+**Architecture**
+1. [[What Snowflake Is]] — SaaS, one account per cloud region, serverless = Snowflake-managed compute still billed.
+2. [[Three-Layer Architecture]] — shared-disk storage, shared-nothing warehouses; only compute has knobs.
+3. [[Cloud Services Layer]] — auth, metadata, optimizer, result reuse; billed only above 10 % of daily warehouse credits.
+4. [[Compute Layer]] — isolated MPP clusters; spill to remote storage is the scale-up signal.
+5. [[Database Storage Layer]] — compressed, encrypted micro-partitions; billed on average daily bytes incl. Time Travel and Fail-safe.
 
-**Storage (how data sits)**
-6. [[Micro-partitions]]
-7. [[Query Pruning]]
-8. [[Clustering Keys]]
+**Storage**
+6. [[Micro-partitions]] — 50–500 MB uncompressed, load order, per-column min/max and distinct counts.
+7. [[Query Pruning]] — metadata decides which micro-partitions are never read; `Partitions scanned / total` is the proof.
+8. [[Clustering Keys]] — multi-TB tables only; Automatic Clustering is serverless and bills with no warehouse.
 
-**Compute (where the money goes)**
-9. [[Virtual Warehouse]]
-10. [[Warehouse Sizes and Credits]]
-11. [[Auto-suspend and Auto-resume]]
-12. [[Scaling Up vs Scaling Out]]
-13. [[Multi-cluster Warehouse]]
+**Compute**
+9. [[Virtual Warehouse]] — states `STARTED` / `SUSPENDED` / `RESIZING`; SQL default X-Small, Snowsight form X-Large.
+10. [[Warehouse Sizes and Credits]] — XS 1 → 6XL 512 credits/hour, doubling; per second after 60 s.
+11. [[Auto-suspend and Auto-resume]] — default 600 s, checked every ≈ 30 s, `0` never suspends; suspend drops the SSD cache.
+12. [[Scaling Up vs Scaling Out]] — long `execution_time` or spills → up; long `queued_overload_time` → out.
+13. [[Multi-cluster Warehouse]] — Enterprise+; Standard vs Economy policy; UI max 10 clusters, SQL up to 300.
 
-**Caching (why things get fast)**
-14. [[Caching]]
-15. [[Result Cache]]
-16. [[Warehouse Cache]]
-17. [[Metadata Cache]]
+**Caching**
+14. [[Caching]] — result reuse → metadata → warehouse SSD, in that order.
+15. [[Result Cache]] — byte-identical text, unchanged data, 24 h reset on reuse, 31 days max.
+16. [[Warehouse Cache]] — node SSD, gone on suspend, partly gone on downsize.
+17. [[Metadata Cache]] — whole-table `COUNT` / `MIN` / `MAX` and `SHOW` without a warehouse.
 
-**Platform (the container around it all)**
-18. [[Snowflake Editions]]
-19. [[Cloud Providers and Regions]]
-20. [[Organizations and Accounts]]
-21. [[Snowsight]]
-22. [[Credits and Billing]]
+**Platform**
+18. [[Snowflake Editions]] — Standard 1-day Time Travel; Enterprise adds multi-cluster, 90 days, masking; Business Critical adds keys and network.
+19. [[Cloud Providers and Regions]] — one cloud and region per account; egress is the transfer meter.
+20. [[Organizations and Accounts]] — `ORGADMIN` ≠ `ACCOUNTADMIN`; currency figures live in `ORGANIZATION_USAGE`.
+21. [[Snowsight]] — Query History → Query Profile: the four numbers to read.
+22. [[Credits and Billing]] — three meters; only `METERING_DAILY_HISTORY.CREDITS_BILLED` is what you pay. The full metrics and price read-out is the last stop of [[Day 3]].
 
 ## Hadoop bridge
 
-Read the Day 1 rows of [[Hadoop to Snowflake Rosetta Stone]]. The five mappings to carry in your head today:
+| Cloudera | Snowflake | What changes |
+|----------|-----------|--------------|
+| HDFS + Parquet/ORC files | [[Database Storage Layer]], [[Micro-partitions]] | no files, no directories, no direct reads |
+| YARN queues, Spark executors | [[Virtual Warehouse]] | per-workload clusters, seconds to create, hold no data |
+| Hive Metastore, Ranger, ResourceManager | [[Cloud Services Layer]] | also holds per-micro-partition stats and persisted results |
+| Hive partitions and buckets | [[Query Pruning]], [[Clustering Keys]] | every column prunes; clustering only for multi-TB tables |
+| Hive/Impala planner | optimizer in Cloud Services | prunes from metadata before compute starts |
 
-- HDFS and the Parquet files on it → the [[Database Storage Layer]] and its [[Micro-partitions]]. You no longer design files or directories, and you cannot read them directly.
-- YARN queues and Spark executors → [[Virtual Warehouse|virtual warehouses]]. A warehouse is a cluster you can create, resize and switch off in seconds because it holds no data.
-- Hive Metastore (plus Ranger and the ResourceManager) → the [[Cloud Services Layer]], which also keeps per-partition statistics and query results.
-- Hive partitions and bucketing → automatic micro-partitioning with [[Query Pruning]] on every column; [[Clustering Keys]] only for multi-TB tables.
-- Impala and Hive query planning → the optimizer in Cloud Services, which prunes by metadata before any compute starts.
+Full table: [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Hands-on in Snowsight
 
 > [!warning] Not yet executed by the author
 > These steps follow the docs but were written without an account to run them on. If a menu name or result differs, note it; it goes into the next revision.
 
-1. **Account and warehouse.** Complete [[Snowflake Account]]: you should have a login and a warehouse `WH_LEARN_XS` (X-Small, auto-suspend 60 s).
-2. **Tour.** In [[Snowsight]] find: Projects → Worksheets; Monitoring → Query History; Admin → Warehouses; Admin → Cost Management. Open a new worksheet and set its role to `ACCOUNTADMIN`, warehouse to `WH_LEARN_XS`.
+1. **Account and warehouse.** Complete [[Snowflake Account]]: a login and a warehouse `WH_LEARN_XS` (X-Small, auto-suspend 60 s).
+2. **Tour.** In [[Snowsight]] find: Projects → Worksheets; Monitoring → Query History; Admin → Warehouses; Admin → Cost Management. Open a worksheet, role `ACCOUNTADMIN`, warehouse `WH_LEARN_XS`.
 3. **Result cache.** Run this twice:
    ```sql
    SELECT COUNT(*), SUM(L_QUANTITY)
    FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
    WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';
    ```
-   Open Monitoring → Query History. The second run should show near-zero duration; open its Query Profile and look for the single node **QUERY RESULT REUSE**. See [[Result Cache]].
-4. **Pruning.** Open the Query Profile of the *first* run. In the TableScan node read **Partitions scanned** versus **Partitions total**. Now run the same query with `WHERE TO_CHAR(L_SHIPDATE,'YYYY-MM') = '1995-01'` and compare the two numbers. See [[Query Pruning]].
-5. **Metadata cache.** Suspend the warehouse (`ALTER WAREHOUSE WH_LEARN_XS SUSPEND;`), then run `SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM;`. Check Admin → Warehouses: it should still be suspended. Then add `WHERE L_QUANTITY > 10` and run again; the warehouse resumes. See [[Metadata Cache]].
-6. **Warehouse cache.** With the warehouse running, turn result reuse off for the session (`ALTER SESSION SET USE_CACHED_RESULT = FALSE;`) and run the step-3 query twice. In the second Query Profile find the share of bytes scanned **from cache** versus **from remote storage**. See [[Warehouse Cache]].
-7. **Sizes.** `ALTER WAREHOUSE WH_LEARN_XS SET WAREHOUSE_SIZE = SMALL;` then back to `XSMALL`. Note that nothing is lost and no restart happens. See [[Scaling Up vs Scaling Out]].
-8. **Cost.** Admin → Cost Management: find today's credits for `WH_LEARN_XS`. With a 60 s auto-suspend and an X-Small, the whole session should cost a fraction of one credit. See [[Credits and Billing]].
+   Query History → second run near-zero duration → Query Profile shows the single node **Query Result Reuse**. See [[Result Cache]].
+4. **Pruning.** Query Profile of the *first* run → TableScan → **Partitions scanned** vs **Partitions total**. Rerun with `WHERE TO_CHAR(L_SHIPDATE,'YYYY-MM') = '1995-01'` and compare. See [[Query Pruning]].
+5. **Metadata.** `ALTER WAREHOUSE WH_LEARN_XS SUSPEND;` then `SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM;` → Admin → Warehouses still suspended. Add `WHERE L_QUANTITY > 10` → resumes. See [[Metadata Cache]].
+6. **Warehouse cache.** `ALTER SESSION SET USE_CACHED_RESULT = FALSE;` run the step-3 query twice → second Query Profile → IO → **Percentage scanned from cache**. See [[Warehouse Cache]].
+7. **Sizes.** `ALTER WAREHOUSE WH_LEARN_XS SET WAREHOUSE_SIZE = SMALL;` then back to `XSMALL`; nothing restarts. See [[Scaling Up vs Scaling Out]].
+8. **Cost.** Admin → Cost Management → today's credits for `WH_LEARN_XS`; then
+   ```sql
+   SELECT warehouse_name, SUM(credits_used) AS credits
+   FROM TABLE(INFORMATION_SCHEMA.WAREHOUSE_METERING_HISTORY(DATEADD('hour', -24, CURRENT_TIMESTAMP())))
+   GROUP BY 1;
+   ```
+   An X-Small with 60 s auto-suspend keeps the whole session under a fraction of one credit. The full read of metrics and price comes at the end of [[Day 3]]. See [[Credits and Billing]].
 
 ## Drill
 
-1. Open the Spaced Repetition deck `flashcards/day1` and review every card once (about 65 cards, 10 to 15 minutes).
-2. From the repository root run `python3 quiz/quiz.py day1`. Pass bar: 80 %.
-3. Below 80 %: reread the notes listed under *Missed concepts*, then `python3 quiz/quiz.py review` until the missed questions come back right, then take `day1` again.
-4. `python3 quiz/quiz.py stats` shows your weakest concepts and which note to reread.
-5. Finish by writing two sentences in the "Explain it to a teammate" box of at least five notes. Pick the ones that felt shakiest.
+1. Spaced Repetition deck `flashcards/day1`, every card once (about 65 cards, 10 to 15 minutes).
+2. `docker compose run --rm quiz day1` (or `python3 quiz/quiz.py day1`). Pass bar: 80 %.
+3. Below 80 %: reread the notes under *Missed concepts*, then `quiz review` until they come back right, then `day1` again.
+4. `quiz stats` shows the weakest concepts and which note to reread.
+5. Two sentences in the "Explain it to a teammate" box of at least five notes. Pick the shakiest.
 
 ## Acceptance
 
@@ -87,7 +114,7 @@ Tick these off, then tick "Day 1" on [[00 Home]]:
 
 - [ ] The vault opens in Obsidian and the graph shows seven colour groups.
 - [ ] The Spaced Repetition deck `day1` lists about 65 cards.
-- [ ] `python3 quiz/quiz.py day1` runs end to end and shows a score.
+- [ ] `quiz day1` runs end to end and shows a score.
 - [ ] `checks/run.sh` (or `docker compose run --rm checks`) ends with "all checks passed".
 - [ ] The hands-on steps worked, or you noted which step differed from the description.
 - [ ] Quiz score of 80 % or better.
