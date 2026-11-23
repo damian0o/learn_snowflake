@@ -4,35 +4,65 @@ docs: https://docs.snowflake.com/en/user-guide/tables-clustering-keys
 ---
 # Clustering Keys
 
-**In one sentence:** A clustering key is one to a few columns you declare with CLUSTER BY so that Snowflake continuously reorganises a very large table's micro-partitions to keep those columns' values grouped together.
+A declared column list that Automatic Clustering uses to rewrite micro-partitions into narrow key ranges, so pruning works on a column that load order does not sort.
 
-**Why it matters:** It is the one storage tuning knob you have, it costs credits continuously, and it is only worth it for multi-terabyte tables with slow, selective filters. Knowing when not to use it saves money.
+```mermaid
+flowchart TB
+  subgraph before[before: load order · key = customer_region]
+    A1[MP1 · EU,US,APAC] 
+    A2[MP2 · EU,US,APAC]
+    A3[MP3 · EU,US,APAC]
+  end
+  subgraph after[after reclustering · CLUSTER BY customer_region]
+    B1[MP1 · APAC]
+    B2[MP2 · EU]
+    B3[MP3 · US]
+  end
+  before -->|Automatic Clustering · serverless · credits| after
+  Q["WHERE customer_region = 'EU'"] -->|before: 3 of 3 scanned| before
+  Q -->|after: 1 of 3 scanned| after
+```
 
-**Coming from Hadoop:** Hive bucketing and the careful sort-before-write you did in Spark to make Parquet statistics useful. The analogy breaks because clustering is maintained for you after every load by a serverless service (Automatic Clustering), and because you rarely need it: natural load order plus micro-partition metadata already prunes most tables well (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| When | multi-terabyte tables with selective filters or joins on a non-pruning column | clustering-keys page |
+| Key width | 3 to 4 columns at most, lowest cardinality first | clustering-keys page |
+| Cardinality | moderate: date yes, timestamp no (cluster on `TO_DATE(ts)`), UUID no | clustering-keys page |
+| Measure | `SYSTEM$CLUSTERING_DEPTH` and `SYSTEM$CLUSTERING_INFORMATION` (`average_depth`, `average_overlaps`); lower is better | [function](https://docs.snowflake.com/en/sql-reference/functions/system_clustering_information) |
+| Compute | serverless; `METERING_DAILY_HISTORY.SERVICE_TYPE = 'AUTO_CLUSTERING'`; per table in `AUTOMATIC_CLUSTERING_HISTORY` (`CREDITS_USED`, `NUM_BYTES_RECLUSTERED`), latency ≤ 180 min | [view](https://docs.snowflake.com/en/sql-reference/account-usage/automatic_clustering_history) |
+| Exceptions | clones start with Automatic Clustering suspended; not available on hybrid tables | clustering-keys page |
 
 ## How it works
 
-By default micro-partitions follow insertion order, which prunes well on load-time columns and poorly on others. For a table that is **multiple terabytes** and is usually filtered or joined on a column that does not prune, define a clustering key:
+- `ALTER TABLE t CLUSTER BY (k1, k2)` → key stored; nothing rewritten yet.
+- Automatic Clustering → watches new or changed [[Micro-partitions]] → reclusters in the background on Snowflake compute → old micro-partitions retained for Time Travel.
+- Reclustered table → disjoint key ranges → [[Query Pruning]] on `k1`, `k2`.
+- Every subsequent load disturbs the order → more reclustering → recurring credits.
+- `ALTER TABLE t SUSPEND RECLUSTER` / `RESUME RECLUSTER` controls the service.
+
+## Probe
 
 ```sql
-ALTER TABLE fct_orders CLUSTER BY (customer_region, order_date);
+SELECT SYSTEM$CLUSTERING_DEPTH('SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM', '(L_SHIPDATE)');
+SELECT SYSTEM$CLUSTERING_DEPTH('SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM', '(L_COMMENT)');
+-- on your own table:  ALTER TABLE fct_orders CLUSTER BY (order_date, customer_region);
 ```
 
-Snowflake's **Automatic Clustering** then reclusters in the background whenever enough new data has arrived, rewriting micro-partitions so that each one covers a narrow range of the key. This runs on Snowflake-managed (serverless) compute and consumes credits; it also keeps the replaced partitions for Time Travel and Fail-safe, so it costs storage too.
+Depth near 1 on `L_SHIPDATE` (naturally ordered), far higher on `L_COMMENT`.
 
-Choosing a key:
+## Cost
 
-- Columns used most in **selective filters**, then columns used in **joins**.
-- **Moderate cardinality**: enough distinct values to prune, few enough to group. A boolean is useless; a UUID is too fine. Prefer `order_date` to `order_timestamp`, or cluster on an expression such as `TO_DATE(order_timestamp)`.
-- At most 3 or 4 columns, ordered from lowest to highest cardinality.
+Serverless credits → `AUTOMATIC_CLUSTERING_HISTORY.CREDITS_USED`; storage for retained versions → `TABLE_STORAGE_METRICS.TIME_TRAVEL_BYTES`. No warehouse of yours runs.
 
-Check the effect with `SYSTEM$CLUSTERING_INFORMATION` and `SYSTEM$CLUSTERING_DEPTH`; lower depth is better clustered.
+## Traps
 
-## Gotchas / exam traps
+- Clustering a small table or a frequently rewritten one burns credits for no pruning gain.
+- It bills with no warehouse running; watch `AUTO_CLUSTERING` in the daily metering.
+- A cloned table needs `RESUME RECLUSTER`.
 
-- Clustering is for very large tables (multi-TB). For everything else, the default load order is enough and clustering just burns credits.
-- Automatic Clustering is serverless: it bills credits with no warehouse of yours running.
-- A cloned table has Automatic Clustering suspended; you must resume it. Clustering keys cannot be defined on hybrid tables.
+**vs Cloudera:** `CLUSTERED BY … SORTED BY` buckets you rebuilt on every write → a declared key maintained by a background service billed in credits. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
@@ -40,8 +70,7 @@ Check the effect with `SYSTEM$CLUSTERING_INFORMATION` and `SYSTEM$CLUSTERING_DEP
 - [[Query Pruning]]
 - [[Database Storage Layer]]
 - [[Credits and Billing]]
-- [[Virtual Warehouse]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

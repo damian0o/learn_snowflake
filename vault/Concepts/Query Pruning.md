@@ -4,42 +4,66 @@ docs: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
 ---
 # Query Pruning
 
-**In one sentence:** Pruning is the optimizer skipping every micro-partition whose column metadata proves it cannot contain rows matching the query, before any data is read.
+Skipping micro-partitions whose per-column min/max cannot satisfy the predicate, decided from metadata in Cloud Services before the warehouse reads anything.
 
-**Why it matters:** Pruning is Snowflake's substitute for indexes. A query that prunes well on a 10 TB table reads megabytes; one that cannot prune reads the whole table and you pay for every second of it.
+```mermaid
+flowchart LR
+  Q["WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31'"] --> CS[Cloud Services<br/>compare with min/max of every micro-partition]
+  CS -->|range overlaps| K[kept MPs]
+  CS -->|no overlap| X[skipped MPs · never read · no credits]
+  K --> WH[warehouse scan<br/>referenced columns only]
+  WH -->|join filters at runtime| K2[further MPs skipped]
+```
 
-**Coming from Hadoop:** Hive partition pruning on `dt`, generalised to every column, plus Parquet row-group min/max statistics, done centrally by the optimizer rather than by each mapper opening footers. The analogy breaks because pruning quality depends on how data was ordered when loaded, not on a directory layout you designed (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Decided where | Cloud Services at compile time, from metadata; extra runtime pruning on the warehouse (e.g. join filters) | micropartitions page |
+| Evidence | Query Profile → TableScan → `Partitions scanned` vs `Partitions total` | [Query Profile](https://docs.snowflake.com/en/user-guide/ui-snowsight-activity) |
+| Same numbers in SQL | `ACCOUNT_USAGE.QUERY_HISTORY.PARTITIONS_SCANNED`, `PARTITIONS_TOTAL` (latency ≤ 45 min) | [view](https://docs.snowflake.com/en/sql-reference/account-usage/query_history) |
+| Prunes | `=`, `<`, `>`, `BETWEEN`, `IN` on a bare column | micropartitions page |
+| Defeats pruning | function wrapped around the column, `LIKE '%x'`, type coercion, scattered column values | micropartitions page |
 
 ## How it works
 
-Two kinds of pruning happen on every query:
+- Predicate → per-column range per [[Micro-partitions|micro-partition]] → keep only overlapping ranges → plan lists them.
+- Kept micro-partitions → warehouse reads only the referenced columns (columnar).
+- Natural order helps: time-ordered loads give disjoint date ranges; a UUID column overlaps everywhere → nothing skipped.
+- Function on the column (`TO_CHAR(L_SHIPDATE,'YYYY-MM')`) → optimizer cannot compare to min/max → full scan.
+- Multi-TB table filtered on a non-pruning column → [[Clustering Keys]].
 
-1. **Partition pruning.** [[Cloud Services Layer]] compares the predicate with each micro-partition's min/max metadata. Partitions that cannot match are never read. `WHERE ship_date BETWEEN '2026-01-01' AND '2026-01-07'` on a table loaded in date order touches a handful of partitions.
-2. **Column pruning.** Inside the partitions that are read, only the referenced columns are fetched, because the storage is columnar.
+## Probe
 
-You can see pruning in **Query Profile** (Snowsight → Monitoring → Query History → a query → Query Profile): the TableScan node reports *Partitions scanned* against *Partitions total*. A small ratio means good pruning.
+```sql
+SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
+WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';            -- prunes
+SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
+WHERE TO_CHAR(L_SHIPDATE, 'YYYY-MM') = '1995-01';                   -- does not
+```
 
-Pruning works well when:
+Snowsight → Query Profile of each → `Partitions scanned` / `Partitions total`: small ratio, then ≈ 1.
 
-- the filter column's values are grouped, not scattered, across partitions (natural for load-date columns);
-- the predicate is a simple comparison the optimizer can evaluate against min/max (`=`, `<`, `BETWEEN`, `IN`). Wrapping the column in a function (`WHERE TO_CHAR(ship_date,'YYYY') = '2026'`) usually disables it.
+## Cost
 
-When a huge table is filtered on a column that does not prune, [[Clustering Keys]] reorganise micro-partitions so that it does.
+Skipped micro-partitions cost nothing; scanned ones cost warehouse seconds → `CREDITS_ATTRIBUTED_COMPUTE` per query. The ratio in `QUERY_HISTORY` is the cheapest performance review you have.
 
-## Gotchas / exam traps
+## Traps
 
-- Pruning happens primarily at compile time, in Cloud Services, using metadata only; some further pruning (for example from join filters) happens at run time on the warehouse. No warehouse time is spent on partitions skipped at compile time.
-- Functions on the filtered column, `LIKE '%x'`, and comparing columns of different types tend to defeat pruning.
-- "Partitions scanned" much lower than "Partitions total" in Query Profile is the evidence that pruning worked.
+- Pruning is metadata work in Cloud Services; the warehouse never sees skipped micro-partitions.
+- Any function around the filtered column, or a `LIKE` with a leading wildcard, turns the filter into a full scan.
+- `Partitions scanned` ≪ `Partitions total` is the proof; a low number alone proves nothing.
+
+**vs Cloudera:** Hive pruned only on `PARTITIONED BY` columns you chose at design time → every column has min/max per micro-partition, no DDL. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Micro-partitions]]
 - [[Clustering Keys]]
 - [[Cloud Services Layer]]
+- [[Metadata Cache]]
 - [[Snowsight]]
-- [[Warehouse Sizes and Credits]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

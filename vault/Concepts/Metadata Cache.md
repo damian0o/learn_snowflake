@@ -1,41 +1,70 @@
 ---
-tags: [concept, day1, compute]
+tags: [concept, day1, caching]
 docs: https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions
 ---
 # Metadata Cache
 
-**In one sentence:** The metadata cache is the statistics Cloud Services keeps about every table and micro-partition, which lets Snowflake answer some queries and prune most others without touching a warehouse.
+Per-micro-partition statistics maintained in Cloud Services on every write, serving whole-table aggregates, object listings and pruning without a warehouse.
 
-**Why it matters:** It is why COUNT(*) on a huge table is instant and free, why pruning costs nothing, and why SHOW and DESCRIBE never wait for a warehouse.
+```mermaid
+flowchart LR
+  W[every write] --> MD[(metadata · Cloud Services<br/>per MP per column: min · max · distinct count · row count)]
+  MD -->|"COUNT(*) · MIN · MAX, no WHERE"| A[answer · no warehouse]
+  MD -->|SHOW · DESCRIBE · INFORMATION_SCHEMA| B[answer · no warehouse]
+  MD -->|min/max vs predicate| P[Query Pruning plan]
+  F["COUNT(*) WHERE … / GROUP BY"] -->|needs rows| WH[warehouse]
+```
 
-**Coming from Hadoop:** The Hive Metastore knew your tables' schemas and partition lists but nothing about their contents; row counts needed `ANALYZE TABLE` and were stale by lunch. The analogy breaks because Snowflake's statistics are written with the data itself, on every load and every DML, so they are never stale (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Kept per micro-partition | value range per column, number of distinct values, other properties | micropartitions page |
+| Freshness | updated as part of every write; no `ANALYZE` | micropartitions page |
+| Served without a warehouse | whole-table `COUNT(*)`, `MIN`, `MAX` for most data types; `SHOW`, `DESCRIBE` | intro-key-concepts |
+| Falls back to a warehouse | any `WHERE`, `GROUP BY`, `DISTINCT`, join | behaviour, see probe |
+| Name | training and exam term; the docs say "metadata" | — |
 
 ## How it works
 
-Every [[Micro-partitions|micro-partition]] carries metadata maintained by [[Cloud Services Layer]]: row count, and for each column the minimum and maximum, the number of distinct values, the null count, and more. Because the metadata is updated as part of every write, it is always exact.
+- Write → micro-partition registered with its statistics → nothing to refresh later.
+- `SELECT COUNT(*) FROM t` → sum of row counts from metadata → returned by [[Cloud Services Layer]].
+- `MIN(col)` / `MAX(col)` → min of mins, max of maxes.
+- Predicate → compared with the same min/max → [[Query Pruning]] decided before compute.
+- Add a filter → rows must be read → [[Virtual Warehouse]] resumes.
 
-What it does for you:
+## Probe
 
-- **Answers whole-table aggregates without compute.** `SELECT COUNT(*) FROM t`, `SELECT MIN(order_date), MAX(order_date) FROM t` can be served from metadata alone for most data types; the warehouse can stay suspended and no credits are spent. Add a `WHERE` or a `GROUP BY` and the query runs normally.
-- **Drives [[Query Pruning]].** The optimizer compares predicates with per-partition min/max to decide which partitions to read.
-- **Serves `SHOW` and `DESCRIBE`.** Object listings and schemas come from metadata, never from a warehouse.
+```sql
+ALTER WAREHOUSE WH_LEARN_XS SUSPEND;
+SELECT COUNT(*), MIN(L_SHIPDATE), MAX(L_SHIPDATE) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM;
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';                                   -- still SUSPENDED
+SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM WHERE L_QUANTITY > 10;
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';                                   -- STARTED
+```
 
-The docs do not name this a "cache"; the term comes from training material and the exam. The behaviour is what matters: metadata answers come from Cloud Services, instantly, without a warehouse. Try it on Day 1: suspend your warehouse and run `COUNT(*)` on a sample table.
+Query History: the first query shows no warehouse; the second shows `WH_LEARN_XS`.
 
-## Gotchas / exam traps
+## Cost
 
-- `COUNT(*)`, `MIN` and `MAX` on a whole table need no warehouse. Add a filter and they do.
-- Metadata is never stale; there is no `ANALYZE` to run.
-- Lives in Cloud Services next to the result cache, not on the warehouse.
+0 warehouse credits for metadata answers; cloud services credits only, inside the 10 % allowance ([[Credits and Billing]]).
+
+## Traps
+
+- One `WHERE` turns a free query into a warehouse query.
+- Statistics are never stale; there is nothing to recompute.
+- Lives in Cloud Services beside the [[Result Cache]], not on the warehouse.
+
+**vs Cloudera:** Hive statistics via `ANALYZE TABLE … COMPUTE STATISTICS`, stale the moment data landed → maintained on every write, exact, and usable for answers not just plans. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Caching]]
-- [[Cloud Services Layer]]
 - [[Micro-partitions]]
 - [[Query Pruning]]
+- [[Cloud Services Layer]]
 - [[Result Cache]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

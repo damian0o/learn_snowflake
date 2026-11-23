@@ -1,42 +1,70 @@
 ---
-tags: [concept, day1, compute]
-docs: https://docs.snowflake.com/en/user-guide/performance-query-warehouse-cache
+tags: [concept, day1, caching]
+docs: https://docs.snowflake.com/en/user-guide/warehouses-considerations
 ---
 # Warehouse Cache
 
-**In one sentence:** The warehouse cache keeps the table data a running warehouse has already read on its local storage, so later queries that need the same micro-partitions skip the trip to cloud storage.
+Local SSD on each warehouse node holding the columns of micro-partitions read by recent queries; it lives exactly as long as the warehouse stays started.
 
-**Why it matters:** It is the reason a longer auto-suspend can make BI faster and cheaper at once, and the reason the first query after a resume is the slow one.
+```mermaid
+flowchart LR
+  S[(remote storage)] -->|first read| SSD[(node SSD<br/>recently read columns)]
+  SSD -->|later queries| Q[scan]
+  SSD -. suspend .-> GONE[empty]
+  SSD -. downsize .-> PART[removed nodes' share gone]
+  SSD -. upsize .-> KEEP[kept + empty new nodes]
+```
 
-**Coming from Hadoop:** The OS page cache on a DataNode or Spark's cached RDD, but managed by Snowflake and shared by every query on that warehouse. The analogy breaks because the cache belongs to the warehouse, not the data: suspend the warehouse and the cache is gone, while the data is untouched (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Lifetime | while the warehouse is started | warehouses-considerations |
+| Dropped by | suspend (all); downsizing (removed nodes' portion) | warehouses-considerations |
+| Scope | shared by every query on that warehouse; private to it | warehouses-considerations |
+| Capacity | bounded by node SSD; grows with size | warehouses-considerations |
+| Evidence | Query Profile IO → `Percentage scanned from cache`; `QUERY_HISTORY.PERCENTAGE_SCANNED_FROM_CACHE` (0.0–1.0) | [view](https://docs.snowflake.com/en/sql-reference/account-usage/query_history) |
 
 ## How it works
 
-A [[Virtual Warehouse]] reads micro-partition columns from the [[Database Storage Layer]] and keeps them on its nodes' local disk (SSD). While the warehouse keeps running, a query that needs some of those columns reads them locally. Query Profile shows this as the share of *bytes scanned from cache* against *bytes scanned from remote storage*.
+- Query → surviving [[Micro-partitions]] → referenced columns fetched from remote storage → written to node SSD on the way through.
+- Next query touching the same columns → read from SSD → fewer seconds billed.
+- Hash-distributed across nodes; a node removed by downsizing takes its share with it.
+- Suspend → nodes released → cache empty → first query after resume pays full remote reads.
+- Trade-off with [[Auto-suspend and Auto-resume]]: a BI warehouse suspended every 60 s re-reads its tables every refresh.
 
-Lifetime and limits:
+## Probe
 
-- Kept **as long as the warehouse runs**. Dropped when the warehouse **suspends**.
-- **Downsizing** drops the part of the cache held by the removed nodes. Upsizing keeps the existing cache and adds empty nodes.
-- Bounded by the local disk of the warehouse; a bigger warehouse has a bigger cache.
-- Shared by every user and query on that warehouse; private to that warehouse.
+```sql
+ALTER SESSION SET USE_CACHED_RESULT = FALSE;
+SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
+WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';   -- twice
+SELECT query_id, percentage_scanned_from_cache FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE warehouse_name = 'WH_LEARN_XS' ORDER BY start_time DESC LIMIT 5;   -- ≤ 45 min later
+```
 
-This is why [[Auto-suspend and Auto-resume]] settings are a performance choice, not just a cost choice: a BI warehouse suspended after 60 seconds re-reads everything from cloud storage on each wake-up, while one left running for 10 minutes serves the dashboard refresh from local disk.
+Run 1: 0 %. Run 2: well above 0 % in Query Profile → IO.
 
-## Gotchas / exam traps
+## Cost
 
-- Dropped on suspend. A warehouse that resumes is a cold warehouse.
-- Holds table data, not results. Same query twice on a warm warehouse: the second run is served by the result cache before the warehouse cache even matters.
-- Per warehouse. Two warehouses reading the same table each build their own cache.
+No direct meter. Shows up as fewer warehouse seconds per query; the counter-cost is the idle time you pay to keep the cache warm (`CREDITS_USED_COMPUTE − CREDITS_ATTRIBUTED_COMPUTE_QUERIES`).
+
+## Traps
+
+- A resumed warehouse is a cold warehouse.
+- Holds columns, not results; with result reuse on, run 2 never reaches it.
+- Per warehouse: two warehouses on one table each warm their own SSD.
+
+**vs Cloudera:** OS page cache on DataNodes, kept warm by a cluster that never stopped → explicit per-warehouse SSD wiped by suspend, so the idle timeout is a performance setting. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Caching]]
 - [[Virtual Warehouse]]
 - [[Auto-suspend and Auto-resume]]
+- [[Scaling Up vs Scaling Out]]
 - [[Result Cache]]
-- [[Database Storage Layer]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

@@ -1,36 +1,68 @@
 ---
-tags: [concept, day1, compute]
+tags: [concept, day1, caching]
 docs: https://docs.snowflake.com/en/user-guide/querying-persisted-results
 ---
 # Result Cache
 
-**In one sentence:** The result cache stores every query's result set in Cloud Services for 24 hours and returns it instantly to anyone who runs the exact same query against unchanged data.
+Persisted query results in Cloud Services, returned without a warehouse when a new query matches an earlier one exactly and nothing underneath has changed.
 
-**Why it matters:** Dashboards that refresh the same queries cost nothing after the first run, and your benchmarks lie unless you switch it off.
+```mermaid
+flowchart LR
+  Q[new query] --> C1{text byte-identical?}
+  C1 -->|no| X[execute]
+  C1 --> C2{table data and micro-partitions unchanged?}
+  C2 -->|no| X
+  C2 --> C3{role has privileges on all tables?}
+  C3 -->|no| X
+  C3 --> C4{no UUID_STRING · RANDOM · RANDSTR · external functions · hybrid tables?}
+  C4 -->|no| X
+  C4 --> C5{USE_CACHED_RESULT = TRUE and result still present?}
+  C5 -->|no| X
+  C5 -->|yes| R[Query Result Reuse · 0 warehouse credits]
+  X --> P[(result persisted 24 h)]
+```
 
-**Coming from Hadoop:** No Hadoop equivalent; Hive and Impala re-executed every query (Impala could reuse metadata, not results). The analogy breaks because this cache is shared across users and needs no running compute at all (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Lifetime | 24 h after last use; each reuse resets it; purged 31 days after first execution | persisted-results page |
+| Match | exact text: case, whitespace, aliases all matter | persisted-results page |
+| Blockers | `UUID_STRING`, `RANDOM`, `RANDSTR`, external functions, hybrid tables, changed session options that affect results | persisted-results page |
+| Data | no DML since, and micro-partitions unchanged (reclustering counts) | persisted-results page |
+| Switch | `USE_CACHED_RESULT` session/user/account parameter, default `TRUE` | persisted-results page |
+| Large results | > 100 KB served via a token valid 6 h | persisted-results page |
 
 ## How it works
 
-Every successful query's result is persisted. A new query reuses it when **all** of these hold:
+- Every successful query → result persisted in Cloud Services.
+- Next query → the checks above → hit → served from storage of the result, no warehouse, Query Profile shows a single `Query Result Reuse` node.
+- Any write to a referenced table, or Automatic Clustering rewriting its [[Micro-partitions]], invalidates.
+- `SHOW` results reuse only for the same role that produced them.
+- Meeting every condition is necessary, not a guarantee.
 
-- the SQL text is **identical**, byte for byte (case, whitespace and aliases matter);
-- the underlying table data has **not changed** (no DML since) and the micro-partitions are unchanged (reclustering counts as a change);
-- the role has the required privileges on the tables;
-- the query uses no non-deterministic or external functions (`CURRENT_TIMESTAMP`, `RANDOM`, `UUID_STRING`, external functions all block reuse) and does not touch hybrid tables;
-- `USE_CACHED_RESULT` is `TRUE` (the default) for the session.
+## Probe
 
-Lifetime: **24 hours** after the last use. Each reuse resets the 24-hour window, up to **31 days** from the first execution, after which the result is purged and recomputed on the next run.
+```sql
+SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
+WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';   -- run twice, identical text
+SELECT query_id, total_elapsed_time, warehouse_name
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(RESULT_LIMIT => 5)) ORDER BY start_time DESC;
+```
 
-Reused results are served from [[Cloud Services Layer]], so no warehouse needs to be running and no warehouse credits are spent. In Query Profile the single node reads *QUERY RESULT REUSE*. Watch for it on Day 1 hands-on: run the same query twice and compare.
+Run 2: milliseconds, Query Profile = `Query Result Reuse`. Change one character (`select` lowercase) → full execution again.
 
-Meeting every condition does not guarantee reuse, but in practice it is reliable for dashboards and repeated reports.
+## Cost
 
-## Gotchas / exam traps
+0 warehouse credits on a hit; the lookup is cloud services work inside the 10 % allowance. `QUERY_HISTORY.BYTES_SCANNED = 0` on reused queries.
 
-- 24 hours, reset on every reuse, maximum 31 days total.
-- Exact text. `SELECT *` and `select *` are different queries to the result cache.
-- A different user with the same role gets the cached result too; the cache is per account, not per user.
+## Traps
+
+- `SELECT *` and `select *` are different queries to this cache.
+- Reclustering is a data change even though no row changed.
+- Per account: a different user whose role can read the tables gets the persisted result.
+
+**vs Cloudera:** nothing equivalent in Hive or Impala; result caching lived in the BI tool. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
@@ -42,4 +74,4 @@ Meeting every condition does not guarantee reuse, but in practice it is reliable
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

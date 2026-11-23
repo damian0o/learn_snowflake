@@ -1,32 +1,61 @@
 ---
-tags: [concept, day1, compute]
+tags: [concept, day1, caching]
 docs: https://docs.snowflake.com/en/user-guide/querying-persisted-results
 ---
 # Caching
 
-**In one sentence:** Snowflake has three caches at three layers: the result cache in Cloud Services, the warehouse cache on each warehouse's local storage, and the metadata cache in Cloud Services.
+Three caches in two layers: persisted results and metadata in Cloud Services, raw column data on each warehouse's SSD; a query is checked against them in that order.
 
-**Why it matters:** The caches explain why identical queries become free, why a warehouse that just woke up feels slow, and why COUNT(*) on a billion rows returns instantly. Each one has a different lifetime and a different owner.
+```mermaid
+flowchart TB
+  Q[query] --> R{result reuse?<br/>same text · same data · same privileges}
+  R -->|yes| RC[(Result cache · Cloud Services · 24 h, max 31 d)] --> OUT[result · 0 warehouse credits]
+  R -->|no| M{metadata only?<br/>COUNT · MIN · MAX · SHOW}
+  M -->|yes| MC[(Metadata · Cloud Services · always current)] --> OUT
+  M -->|no| WH[warehouse · auto-resume]
+  WH --> L{column in SSD?}
+  L -->|yes| SSD[(Warehouse cache · per warehouse · until suspend)]
+  L -->|no| S[(remote storage)]
+  SSD & S --> OUT2[result · persisted for reuse]
+```
 
-**Coming from Hadoop:** Spark's `.cache()` and the OS page cache on DataNodes were the only caches you had, both per job and per node. The analogy breaks because two of Snowflake's three caches live outside any compute you pay for, and all three are automatic (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Cache | Lives in | Holds | Dropped by | Zero warehouse credits? |
+|-------|----------|-------|------------|-------------------------|
+| [[Result Cache]] | Cloud Services | full result of a query | 24 h idle, 31 d max, data change, reclustering | yes |
+| [[Metadata Cache]] | Cloud Services | row count, min/max, distinct count per column per micro-partition | never stale; updated on every write | yes |
+| [[Warehouse Cache]] | each warehouse's node SSD | raw columns of recently read micro-partitions | suspend; downsizing (removed nodes) | no, fewer seconds |
 
 ## How it works
 
-| Cache | Lives in | Holds | Lifetime | Note |
-|-------|----------|-------|----------|------|
-| [[Result Cache]] | [[Cloud Services Layer]] | the full result of a query | 24 h, extended on each reuse, up to 31 days | identical SQL text, unchanged data, needs no warehouse |
-| [[Warehouse Cache]] | each [[Virtual Warehouse]], local disk | raw table data (micro-partition columns) read by recent queries | while the warehouse runs; dropped on suspend | why the second query on a warm warehouse is faster |
-| [[Metadata Cache]] | [[Cloud Services Layer]] | micro-partition statistics: row counts, min, max, distinct counts | always current, maintained on every write | answers `COUNT(*)`, `MIN`, `MAX` on whole tables and drives pruning |
+- Order: result reuse → metadata shortcut → warehouse; the first two never start a warehouse.
+- Result reuse keys on byte-identical SQL text; metadata serves only whole-table aggregates and object listings.
+- Warehouse SSD is shared by all users of that warehouse and private to it; a second warehouse on the same table warms its own.
+- `ALTER SESSION SET USE_CACHED_RESULT = FALSE` disables result reuse for benchmarking; nothing disables the SSD cache except suspend.
 
-A query is checked against the caches in this order: can the result cache answer it (same text, same data, allowed)? If not, can metadata alone answer it? If not, run it on the warehouse, where the warehouse cache may spare a trip to cloud storage for some partitions.
+## Probe
 
-You can turn result reuse off for a session with `ALTER SESSION SET USE_CACHED_RESULT = FALSE`, which is how you benchmark honestly.
+```sql
+ALTER SESSION SET USE_CACHED_RESULT = FALSE;
+SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
+WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';   -- run twice
+ALTER SESSION SET USE_CACHED_RESULT = TRUE;
+```
 
-## Gotchas / exam traps
+Query Profile of run 2 → IO → `Percentage scanned from cache` > 0 (SSD). With reuse back on, a third run shows the `Query Result Reuse` node and no scan.
 
-- Three caches, three places: result cache and metadata cache in Cloud Services, warehouse cache on the warehouse.
-- Only the warehouse cache depends on the warehouse being up. Suspending drops it; the other two survive.
-- Benchmarks that ignore caching are wrong twice: the second run hits the result cache, and the warm warehouse hides scan time.
+## Cost
+
+Result and metadata hits → 0 warehouse credits (cloud services only, inside the 10 % allowance). SSD hits → fewer warehouse seconds. `QUERY_HISTORY.PERCENTAGE_SCANNED_FROM_CACHE` per query.
+
+## Traps
+
+- Three caches, two layers; only the SSD cache depends on the warehouse being up.
+- A benchmark without `USE_CACHED_RESULT = FALSE` measures the result cache; a benchmark on a warm warehouse measures SSD.
+- Result reuse is per account, not per user: another user with sufficient privileges gets the same persisted result.
+
+**vs Cloudera:** OS page cache on DataNodes and Impala's own buffers, invisible and unmanaged → three named caches with documented scope and lifetime. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
@@ -38,4 +67,4 @@ You can turn result reuse off for a session with `ALTER SESSION SET USE_CACHED_R
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
