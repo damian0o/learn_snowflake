@@ -8,7 +8,7 @@ Four per-account tiers (Standard, Enterprise, Business Critical, VPS); each adds
 
 ```mermaid
 flowchart LR
-  S[Standard<br/>Time Travel ≤ 1 d · Fail-safe 7 d · sharing · replication] --> E[Enterprise<br/>+ multi-cluster · Time Travel ≤ 90 d · MVs · search optimization · masking & row access · QAS · rekeying]
+  S[Standard<br/>Time Travel ≤ 1 d · Fail-safe 7 d · sharing · replication] --> E[Enterprise<br/>+ multi-cluster · Time Travel ≤ 90 d · MVs · search optimization · masking and row access · QAS · rekeying]
   E --> B[Business Critical<br/>+ Tri-Secret Secure · private connectivity · failover/failback · client redirect · PHI/PCI/FedRAMP]
   B --> V[VPS<br/>same features · fully isolated environment · dedicated metadata store]
 ```

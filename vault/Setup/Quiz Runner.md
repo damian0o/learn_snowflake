@@ -30,7 +30,7 @@ Results are stored in `quiz/results/progress.json` (ignored by git). Delete that
 
 ## Checks (author side)
 
-The question bank and the vault have their own quality gate, separate from the quiz: `checks/run.sh` at the repository root (or `docker compose run --rm checks`) runs the tests, the vault link checker and the bank lint. Lint verifies every question's type, answer and concept link and that every concept note has a question. You only need it if you edit questions or notes.
+The question bank and the vault have their own quality gate, separate from the quiz: `checks/run.sh` at the repository root (or `docker compose run --rm checks`) runs the tests, the vault link checker, the pitch checker (prose budget of 300 words per concept note, required sections, banned phrases) and the bank lint. Lint verifies every question's type, answer and concept link and that every concept note has a question. You only need it if you edit questions or notes.
 
 ## Related
 

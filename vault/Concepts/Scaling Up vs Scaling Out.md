@@ -10,7 +10,7 @@ Up = a bigger size for one slow query; out = more clusters of the same size for 
 flowchart TB
   subgraph UP[scale UP · one query slow]
     S1[Small · 2 nodes] -->|ALTER … SET WAREHOUSE_SIZE = LARGE| L1[Large · 8 nodes]
-    sym1[execution_time high · bytes spilled > 0] --> S1
+    sym1[execution_time high · bytes spilled above 0] --> S1
   end
   subgraph OUT[scale OUT · many queries waiting]
     M1[Medium] --- M2[Medium] --- M3[Medium]

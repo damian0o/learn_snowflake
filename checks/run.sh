@@ -11,6 +11,9 @@ python3 -m pytest quiz/tests tools/tests -q
 echo "== vault links"
 python3 tools/check_links.py
 
+echo "== vault pitch (prose budget, headings, banned phrases)"
+python3 tools/check_pitch.py
+
 echo "== question bank lint"
 python3 quiz/quiz.py lint
 echo "lint: OK"

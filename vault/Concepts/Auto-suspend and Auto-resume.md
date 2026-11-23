@@ -8,8 +8,8 @@ Two warehouse properties: suspend after N idle seconds (default 600) and start a
 
 ```mermaid
 stateDiagram-v2
-  STARTED --> SUSPENDED: no activity for AUTO_SUSPEND s<br/>checked ≈ every 30 s · SSD cache dropped · credits stop
-  SUSPENDED --> STARTED: statement needs compute and AUTO_RESUME = TRUE<br/>provisioning 1–2 s · 60 s minimum billed
+  STARTED --> SUSPENDED: no activity for AUTO_SUSPEND s · checked ≈ every 30 s · SSD cache dropped · credits stop
+  SUSPENDED --> STARTED: statement needs compute and AUTO_RESUME = TRUE · provisioning 1–2 s · 60 s minimum billed
   SUSPENDED --> SUSPENDED: AUTO_RESUME = FALSE → statement fails
   STARTED --> STARTED: ALTER WAREHOUSE … SUSPEND / RESUME by hand
 ```

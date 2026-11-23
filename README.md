@@ -7,7 +7,7 @@ A self-paced Snowflake learning environment for a data engineer moving a team fr
 ```
 vault/        open this folder in Obsidian; concepts, syllabus, flashcards, memory notes
 quiz/         interactive quiz runner (python3 quiz/quiz.py ...) and its question bank
-tools/        check_links.py keeps the vault graph free of dangling links and orphans
+tools/        check_links.py (graph integrity), check_pitch.py (style contract), stage_site.py (website)
 project/      the team warehouse project (phase 2), day-3 setup SQL lives here
 checks/       the quality gate (run.sh) and its Docker image
 site/         Quartz config overlay for the GitHub Pages website
@@ -64,5 +64,6 @@ The GitHub Actions workflow in `.github/workflows/checks.yml` runs the same scri
 ```
 python3 -m pytest quiz/tests tools/tests -q
 python3 tools/check_links.py        # no dangling links, no orphan concept notes
+python3 tools/check_pitch.py        # prose budget, required headings, banned phrases per note
 python3 quiz/quiz.py lint           # bank ids, types, answers, concepts, coverage
 ```
