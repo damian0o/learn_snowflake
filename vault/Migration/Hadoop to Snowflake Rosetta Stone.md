@@ -26,7 +26,7 @@ One row per concept: the Cloudera-world thing you know, the Snowflake thing that
 | Your on-premises data centre | [[Cloud Providers and Regions]] | One account lives in one region of one cloud; crossing regions costs egress | AWS, Azure, Google Cloud |
 | One Cloudera Manager, several clusters | [[Organizations and Accounts]] | Accounts can share data without copying and replicate with one command | ORGADMIN above, ACCOUNTADMIN inside |
 | Node-hours and rack capital | [[Credits and Billing]] | Seconds of compute, compressed bytes stored, bytes leaving the region, each metered separately | Idle costs almost nothing |
-| The whole Cloudera platform | [[What Snowflake Is]] | Nothing to install or patch; storage and compute billed separately | SaaS, one copy of data, elastic compute |
+| The whole Cloudera platform | [[What Snowflake Is]] | Nothing to install or patch; storage and compute billed separately | SaaS, one copy of data, per-second billed warehouses |
 | Hadoop's three concerns on one set of nodes | [[Three-Layer Architecture]] | Layers run on separate infrastructure and scale independently | Storage, Compute, Cloud Services |
 | Data-local processing (code to data) | [[Compute Layer]] | Compute reads shared cloud storage; pruning and caches make that fast | Many warehouses, one copy of data |
 

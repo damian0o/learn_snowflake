@@ -563,3 +563,91 @@
     - A nightly task that recomputes counts
   answer: Nothing; statistics are written with the data on every load and DML
   explanation: Micro-partition metadata is always current, which is why whole-table COUNT(*) is instant and pruning needs no maintenance.
+
+- id: d1-wh-011
+  type: mcq
+  concept: Auto-suspend and Auto-resume
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: You set AUTO_SUSPEND = 45 on a warehouse. What does the documentation say about such a value?
+  options:
+    - It is rejected; the minimum is 60
+    - It is accepted, but the suspend check runs about every 30 seconds, so values that are not multiples of 30 may not behave as expected
+    - It is rounded up to 60 silently
+    - It disables auto-suspend
+  answer: It is accepted, but the suspend check runs about every 30 seconds, so values that are not multiples of 30 may not behave as expected
+  explanation: Any integer 0 or greater is allowed. 0 or NULL means never suspend; the background check runs roughly every 30 seconds.
+
+- id: d1-wh-012
+  type: mcq
+  concept: Scaling Up vs Scaling Out
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: In INFORMATION_SCHEMA.QUERY_HISTORY, queries on WH_BI_M show short execution_time but large queued_overload_time. What is the matching change?
+  options:
+    - Increase WAREHOUSE_SIZE one step
+    - Raise MAX_CLUSTER_COUNT so extra clusters absorb the queue
+    - Lower AUTO_SUSPEND to free resources sooner
+    - Add a clustering key to the largest table
+  answer: Raise MAX_CLUSTER_COUNT so extra clusters absorb the queue
+  explanation: Queued time means concurrency, not per-query heaviness. Scale out with more clusters (Enterprise edition); scale up only when execution time or spilling dominates.
+
+- id: d1-wh-013
+  type: tf
+  concept: Multi-cluster Warehouse
+  tags: [day1, compute]
+  difficulty: 2
+  prompt: True or false - a multi-cluster warehouse can never have more than 10 clusters.
+  answer: false
+  explanation: Snowsight caps the form at 10, but SQL allows up to 300 clusters for X-Small to Medium, 160 for Large, down to 10 for 4X-Large and above.
+
+- id: d1-cache-006
+  type: mcq
+  concept: Warehouse Cache
+  tags: [day1, caching]
+  difficulty: 2
+  prompt: Which Query Profile field shows that a scan was served from the warehouse's local SSD cache?
+  options:
+    - Partitions scanned
+    - Percentage scanned from cache
+    - Bytes spilled to local storage
+    - Query Result Reuse
+  answer: Percentage scanned from cache
+  explanation: IO section, "Percentage scanned from cache". Partitions scanned is pruning, bytes spilled is memory pressure, Query Result Reuse is the result cache.
+
+- id: d1-store-010
+  type: mcq
+  concept: Clustering Keys
+  tags: [day1, storage]
+  difficulty: 2
+  prompt: SYSTEM$CLUSTERING_DEPTH returns 1.2 for (ORDER_DATE) and 48.7 for (CUSTOMER_ID) on a 5 TB table that is mostly filtered by CUSTOMER_ID. What does this tell you?
+  options:
+    - CUSTOMER_ID is well clustered; nothing to do
+    - ORDER_DATE needs a clustering key
+    - CUSTOMER_ID overlaps across many micro-partitions, so filters on it barely prune; a clustering key on CUSTOMER_ID is worth testing
+    - The table is too small for clustering to matter
+  answer: CUSTOMER_ID overlaps across many micro-partitions, so filters on it barely prune; a clustering key on CUSTOMER_ID is worth testing
+  explanation: Lower depth is better. A multi-TB table filtered on a high-depth column is the textbook case for a clustering key; Automatic Clustering then bills serverless credits.
+
+- id: d1-plat-009
+  type: mcq
+  concept: Credits and Billing
+  tags: [day1, platform]
+  difficulty: 2
+  prompt: Which column tells you the credits you actually pay for a day, after the cloud services adjustment?
+  options:
+    - WAREHOUSE_METERING_HISTORY.CREDITS_USED
+    - METERING_DAILY_HISTORY.CREDITS_BILLED
+    - QUERY_ATTRIBUTION_HISTORY.CREDITS_ATTRIBUTED_COMPUTE
+    - METERING_DAILY_HISTORY.CREDITS_USED_CLOUD_SERVICES
+  answer: METERING_DAILY_HISTORY.CREDITS_BILLED
+  explanation: CREDITS_BILLED = compute + cloud services + the negative CREDITS_ADJUSTMENT_CLOUD_SERVICES. Every other credit column is pre-adjustment.
+
+- id: d1-plat-010
+  type: fill
+  concept: Auto-suspend and Auto-resume
+  tags: [day1, platform, compute]
+  difficulty: 3
+  prompt: Idle credits of a warehouse per hour = CREDITS_USED_COMPUTE minus which WAREHOUSE_METERING_HISTORY column? (column name)
+  answer: ["CREDITS_ATTRIBUTED_COMPUTE_QUERIES", "credits_attributed_compute_queries"]
+  explanation: CREDITS_ATTRIBUTED_COMPUTE_QUERIES excludes idle minutes, so the difference is what the warehouse cost while nothing ran.

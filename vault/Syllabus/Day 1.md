@@ -102,7 +102,7 @@ Full table: [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Drill
 
-1. Spaced Repetition deck `flashcards/day1`, every card once (about 65 cards, 10 to 15 minutes).
+1. Spaced Repetition deck `flashcards/day1`, every card once (about 72 cards, 10 to 15 minutes).
 2. `docker compose run --rm quiz day1` (or `python3 quiz/quiz.py day1`). Pass bar: 80 %.
 3. Below 80 %: reread the notes under *Missed concepts*, then `quiz review` until they come back right, then `day1` again.
 4. `quiz stats` shows the weakest concepts and which note to reread.
@@ -113,7 +113,7 @@ Full table: [[Hadoop to Snowflake Rosetta Stone]].
 Tick these off, then tick "Day 1" on [[00 Home]]:
 
 - [ ] The vault opens in Obsidian and the graph shows seven colour groups.
-- [ ] The Spaced Repetition deck `day1` lists about 65 cards.
+- [ ] The Spaced Repetition deck `day1` lists about 72 cards.
 - [ ] `quiz day1` runs end to end and shows a score.
 - [ ] `checks/run.sh` (or `docker compose run --rm checks`) ends with "all checks passed".
 - [ ] The hands-on steps worked, or you noted which step differed from the description.

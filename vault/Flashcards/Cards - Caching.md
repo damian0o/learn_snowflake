@@ -30,3 +30,7 @@ Which queries can the metadata cache answer with no warehouse?::Whole-table `COU
 Why are Snowflake's table statistics never stale?::They are written with the data on every load and DML, as micro-partition metadata. There is no ANALYZE to run. [[Metadata Cache]]
 
 Coming from Hadoop: which Snowflake cache has no Hadoop equivalent at all?::The result cache. Hive and Impala recomputed every query. [[Result Cache]]
+
+Which Query Profile field proves the warehouse SSD cache served a scan?::IO section, `Percentage scanned from cache`; also `QUERY_HISTORY.PERCENTAGE_SCANNED_FROM_CACHE` (0.0 to 1.0). [[Warehouse Cache]]
+
+What does Query Profile show when the result cache answered a query?::A single node, `Query Result Reuse`, and no warehouse time. [[Result Cache]]

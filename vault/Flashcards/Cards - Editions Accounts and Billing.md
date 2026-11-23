@@ -38,3 +38,9 @@ Compute credits come from three sources. Name them.::Virtual warehouses, serverl
 How is storage billed?::A flat rate per terabyte per month on the average daily on-disk (compressed) bytes, including Time Travel and Fail-safe history. [[Credits and Billing]]
 
 Is loading data into Snowflake charged as data transfer?::No. Ingress is free; egress out of the region is charged. [[Credits and Billing]]
+
+In METERING_DAILY_HISTORY, how is CREDITS_BILLED computed?::`CREDITS_USED_COMPUTE + CREDITS_USED_CLOUD_SERVICES + CREDITS_ADJUSTMENT_CLOUD_SERVICES`, where the adjustment is the negative write-back of the 10 % allowance. [[Credits and Billing]]
+
+Which view records egress between regions or clouds, and its key column?::`ACCOUNT_USAGE.DATA_TRANSFER_HISTORY`, `BYTES_TRANSFERRED` with `SOURCE_REGION`, `TARGET_CLOUD`, `TARGET_REGION`, `TRANSFER_TYPE`. [[Cloud Providers and Regions]]
+
+How do you read an account's edition with SQL?::`SELECT edition FROM SNOWFLAKE.ORGANIZATION_USAGE.ACCOUNTS WHERE account_name = CURRENT_ACCOUNT_NAME();` (needs ORGANIZATION_USAGE access). [[Snowflake Editions]]

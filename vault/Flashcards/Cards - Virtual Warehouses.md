@@ -46,3 +46,13 @@ Standard starts a cluster as soon as a query queues (minimise waiting). Economy 
 A Medium warehouse with 4 clusters running bills how many credits per hour?::16: 4 credits per Medium cluster times 4 clusters. [[Multi-cluster Warehouse]]
 
 Coming from Hadoop: what is the closest thing to a warehouse, and where does the analogy break?::A YARN queue with its Spark executors. It breaks because a warehouse holds no data, so you can create, resize or drop it in seconds with nothing to rebalance. [[Virtual Warehouse]]
+
+How often does Snowflake check whether a warehouse has been idle past AUTO_SUSPEND?::About every 30 seconds, so values under 30 or not multiples of 30 behave unpredictably. [[Auto-suspend and Auto-resume]]
+
+Formula for the idle credits of a warehouse from WAREHOUSE_METERING_HISTORY?::`CREDITS_USED_COMPUTE − CREDITS_ATTRIBUTED_COMPUTE_QUERIES` per hour per warehouse. [[Auto-suspend and Auto-resume]]
+
+Maximum clusters for a multi-cluster warehouse in Snowsight versus SQL?::Snowsight caps at 10; SQL allows up to 300 for X-Small to Medium, down to 10 for 4X-Large and above. [[Multi-cluster Warehouse]]
+
+Under the Economy scaling policy, when does a new cluster start?::Only if the estimated load would keep it busy for at least ==6== minutes; a cluster is marked for shutdown when less than 6 minutes of work remain. [[Multi-cluster Warehouse]]
+
+Which table function shows warehouse credits with no latency, and how far back does it reach?::`INFORMATION_SCHEMA.WAREHOUSE_METERING_HISTORY()`, last 6 months; needs ACCOUNTADMIN or MONITOR USAGE. [[Warehouse Sizes and Credits]]

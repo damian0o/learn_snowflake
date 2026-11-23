@@ -44,3 +44,7 @@ What maintains a clustering key after you define it, and what does it cost?::Aut
 A good clustering key column has ==moderate== cardinality: enough distinct values to prune, few enough to group. Use at most ==3 or 4== columns, ordered from lowest to highest cardinality. [[Clustering Keys]]
 
 Coming from Hadoop: what replaces Hive partitions (`PARTITIONED BY dt`)?::Nothing you design. Micro-partitioning is automatic on every column; clustering keys are a later tuning step for multi-TB tables. [[Micro-partitions]]
+
+Which function reports how well a column's values are separated across micro-partitions, and which direction is better?::`SYSTEM$CLUSTERING_DEPTH` (or `SYSTEM$CLUSTERING_INFORMATION`, field `average_depth`); lower is better. [[Clustering Keys]]
+
+Which view gives per-table storage split into active, Time Travel and Fail-safe bytes?::`ACCOUNT_USAGE.TABLE_STORAGE_METRICS`: `ACTIVE_BYTES`, `TIME_TRAVEL_BYTES`, `FAILSAFE_BYTES`, `RETAINED_FOR_CLONE_BYTES`. [[Database Storage Layer]]
