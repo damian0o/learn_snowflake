@@ -9,7 +9,7 @@ Up = a bigger size for one slow query; out = more clusters of the same size for 
 ```mermaid
 flowchart TB
   subgraph UP[scale UP · one query slow]
-    S1[Small · 2 nodes] -->|ALTER … SET WAREHOUSE_SIZE = LARGE| L1[Large · 8 nodes]
+    S1[Small · 2 credits/h] -->|ALTER … SET WAREHOUSE_SIZE = LARGE| L1[Large · 8 credits/h]
     sym1[execution_time high · bytes spilled above 0] --> S1
   end
   subgraph OUT[scale OUT · many queries waiting]

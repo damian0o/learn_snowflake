@@ -78,3 +78,14 @@ def test_main_scopes_by_day_and_accepts_explicit_paths(tmp_path, capsys):
     assert check_pitch.main(["--vault", str(v)]) == 1
     assert "PITCH Concepts/Bad.md: banned phrase 'elastic'" in capsys.readouterr().out
     assert check_pitch.main(["--vault", str(v), str(good)]) == 0
+
+
+def test_prose_words_excludes_indented_fences_inside_list_items():
+    body = "1. step\n   ```sql\n   SELECT one two three;\n   ```\n2. four five\n"
+    assert check_pitch.prose_words(body) == 5   # 1 step 2 four five; the fenced SQL is excluded
+
+
+def test_banned_hits_use_word_boundaries_and_ignore_fences_and_explain_box():
+    assert check_pitch.banned_hits("inelastic demand; Elasticsearch; brainstorm") == []
+    assert check_pitch.banned_hits("```\nseamless\n```\nfine\n\n## Explain it to a teammate (fill in yourself)\n\n> seamless\n") == []
+    assert check_pitch.banned_hits("An elastic, seamless thing") == ["elastic", "seamless"]

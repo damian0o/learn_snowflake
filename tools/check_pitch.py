@@ -28,7 +28,7 @@ BANNED = [
 EXPLAIN_HEADING = "## Explain it to a teammate"
 FOLDERS = tuple(BUDGETS)
 
-_FENCE_RE = re.compile(r"^(```|~~~).*?^\1[ \t]*$", re.S | re.M)
+_FENCE_RE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1[ \t]*$", re.S | re.M)
 _WORD_RE = re.compile(r"[A-Za-z0-9_']+")
 
 
@@ -58,11 +58,15 @@ def strip_frontmatter(text: str) -> Tuple[List[str], str]:
     return tags, body
 
 
-def prose_words(body: str) -> int:
+def prose_text(body: str) -> str:
+    """Body minus the Explain box, fenced blocks, table lines and heading lines."""
     body = body.split(EXPLAIN_HEADING)[0]
     body = _FENCE_RE.sub("", body)
-    kept = [l for l in body.splitlines() if not l.lstrip().startswith(("|", "#"))]
-    return len(_WORD_RE.findall("\n".join(kept)))
+    return "\n".join(l for l in body.splitlines() if not l.lstrip().startswith(("|", "#")))
+
+
+def prose_words(body: str) -> int:
+    return len(_WORD_RE.findall(prose_text(body)))
 
 
 def missing_headings(body: str, required: Sequence[str]) -> List[str]:
@@ -71,8 +75,13 @@ def missing_headings(body: str, required: Sequence[str]) -> List[str]:
 
 
 def banned_hits(body: str, phrases: Sequence[str] = BANNED) -> List[str]:
-    low = body.lower()
-    hits = [(low.find(p), p) for p in phrases if p in low]
+    """Whole-word, case-insensitive matches in the prose text (fences and Explain box excluded)."""
+    low = prose_text(body).lower()
+    hits = []
+    for p in phrases:
+        m = re.search(r"\b" + re.escape(p) + r"\b", low)
+        if m:
+            hits.append((m.start(), p))
     return [p for _, p in sorted(hits)]
 
 

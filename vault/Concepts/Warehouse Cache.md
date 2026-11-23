@@ -29,7 +29,7 @@ flowchart LR
 
 - Query → surviving [[Micro-partitions]] → referenced columns fetched from remote storage → written to node SSD on the way through.
 - Next query touching the same columns → read from SSD → fewer seconds billed.
-- Hash-distributed across nodes; a node removed by downsizing takes its share with it.
+- Each node holds part of the cache; downsizing drops the removed nodes' portion, upsizing keeps what is there.
 - Suspend → nodes released → cache empty → first query after resume pays full remote reads.
 - Trade-off with [[Auto-suspend and Auto-resume]]: a BI warehouse suspended every 60 s re-reads its tables every refresh.
 
@@ -39,7 +39,7 @@ flowchart LR
 ALTER SESSION SET USE_CACHED_RESULT = FALSE;
 SELECT COUNT(*), SUM(L_QUANTITY) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM
 WHERE L_SHIPDATE BETWEEN '1995-01-01' AND '1995-01-31';   -- twice
-SELECT query_id, percentage_scanned_from_cache FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+SELECT query_id, percentage_scanned_from_cache FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY   -- ACCOUNTADMIN or SNOWFLAKE.USAGE_VIEWER
 WHERE warehouse_name = 'WH_LEARN_XS' ORDER BY start_time DESC LIMIT 5;   -- ≤ 45 min later
 ```
 

@@ -32,14 +32,14 @@ stateDiagram-v2
 | Thing | Value | Source |
 |-------|-------|--------|
 | Default size, `CREATE WAREHOUSE` | X-Small | warehouses-overview |
-| Default size, Snowsight form | X-Large | warehouses-overview |
+| Default size, Snowsight form | X-Large pre-selected; the docs table now lists both sizes, so check before Create | warehouses-overview |
 | `AUTO_SUSPEND` default | 600 s; `0` or `NULL` = never | [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse) |
 | `AUTO_RESUME` default | `TRUE` | CREATE WAREHOUSE |
 | `INITIALLY_SUSPENDED` default | `FALSE` | CREATE WAREHOUSE |
 | Billing | per second, 60 s minimum per start | warehouses-overview |
 | `SHOW WAREHOUSES` state | `STARTED`, `SUSPENDED`, `RESIZING` | [SHOW WAREHOUSES](https://docs.snowflake.com/en/sql-reference/sql/show-warehouses) |
 | Types | `STANDARD`, `SNOWPARK-OPTIMIZED`, `ADAPTIVE`, `INTERACTIVE` | SHOW WAREHOUSES |
-| Generation | `generation` column; Gen1 credit table, Gen2 not default | SHOW WAREHOUSES, warehouses-overview |
+| Generation | `GENERATION = '2'` is the default where available; `generation` column in `SHOW WAREHOUSES`; the usual credit table is Gen1 | [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse), [gen2](https://docs.snowflake.com/en/user-guide/warehouses-gen2) |
 | Current warehouse per session | 1 | warehouses-overview |
 
 ## How it works
@@ -71,7 +71,7 @@ Credits per second by size while `STARTED` → `ACCOUNT_USAGE.WAREHOUSE_METERING
 
 ## Traps
 
-- Snowsight pre-selects X-Large; SQL defaults to X-Small. Read the size before Create.
+- The Snowsight form pre-selects a size (X-Large in the docs table, which also lists X-Small); SQL defaults to X-Small. Read the size before Create.
 - `SHOW`, `DESCRIBE`, result reuse and metadata-only aggregates run with the warehouse suspended.
 - Dropping a warehouse drops no data; it holds only a cache.
 

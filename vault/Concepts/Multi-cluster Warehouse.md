@@ -42,7 +42,7 @@ flowchart LR
 SHOW WAREHOUSES;     -- "min_cluster_count", "max_cluster_count", "started_clusters", "scaling_policy"
 ALTER WAREHOUSE WH_BI_M SET MAX_CLUSTER_COUNT = 3, SCALING_POLICY = ECONOMY;   -- Enterprise only
 SELECT start_time, avg_running, avg_queued_load
-FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_LOAD_HISTORY
+FROM SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSE_LOAD_HISTORY                     -- ACCOUNTADMIN or SNOWFLAKE.USAGE_VIEWER
 WHERE warehouse_name = 'WH_BI_M' ORDER BY start_time DESC LIMIT 24;   -- 5-min grain
 ```
 
@@ -50,7 +50,7 @@ Snowsight → Admin » Warehouses → cluster count and queued statements per wa
 
 ## Cost
 
-`WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` already sums all clusters; a Medium at 4 clusters bills up to 16 credits/hour. Economy trades queue time for fewer cluster starts.
+`WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` already sums all clusters; a Medium at 4 clusters bills up to 16 Gen1 credits/hour. Economy trades queue time for fewer cluster starts.
 
 ## Traps
 

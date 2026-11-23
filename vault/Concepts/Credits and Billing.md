@@ -40,7 +40,7 @@ Sources: cost-understanding-overall and the linked view pages. Currency: `ORGANI
 
 ```sql
 SELECT usage_date, service_type, credits_used, credits_adjustment_cloud_services, credits_billed
-FROM SNOWFLAKE.ACCOUNT_USAGE.METERING_DAILY_HISTORY
+FROM SNOWFLAKE.ACCOUNT_USAGE.METERING_DAILY_HISTORY            -- ACCOUNTADMIN or SNOWFLAKE.USAGE_VIEWER
 WHERE usage_date >= DATEADD('day', -7, CURRENT_DATE()) ORDER BY 1 DESC, 5 DESC;
 ```
 

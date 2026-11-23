@@ -220,14 +220,14 @@
   concept: Virtual Warehouse
   tags: [day1, compute]
   difficulty: 2
-  prompt: You create a warehouse through the Snowsight form without changing any defaults. What size do you get?
+  prompt: You are about to create a warehouse through the Snowsight form. What is the right move on the size field, and why?
   options:
-    - X-Small
-    - Small
-    - Medium
-    - X-Large
-  answer: X-Large
-  explanation: The Snowsight form defaults to X-Large, while CREATE WAREHOUSE in SQL defaults to X-Small. Check the size before clicking Create.
+    - Leave it; the form uses the same X-Small default as CREATE WAREHOUSE
+    - Check it before Create; the form pre-selects a larger size than SQL's X-Small default
+    - Set it to Medium; smaller sizes are not offered in the form
+    - Leave it; size can only be changed by recreating the warehouse
+  answer: Check it before Create; the form pre-selects a larger size than SQL's X-Small default
+  explanation: CREATE WAREHOUSE defaults to X-Small. The Snowsight form pre-selects a larger size (the docs table has listed X-Large), so read the field before clicking Create. Size can be altered later in any case.
 
 - id: d1-wh-003
   type: fill

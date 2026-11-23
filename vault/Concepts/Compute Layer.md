@@ -9,7 +9,7 @@ The query processing layer: independent MPP clusters (virtual warehouses) that e
 ```mermaid
 flowchart LR
   P[plan from Cloud Services] --> WH
-  subgraph WH[WH_LOAD_M · Medium · 4 nodes]
+  subgraph WH[WH_LOAD_M · Medium]
     direction TB
     N1[node 1 · SSD] 
     N2[node 2 · SSD]
@@ -18,15 +18,15 @@ flowchart LR
   end
   N1 & N2 & N3 & N4 -->|share of surviving micro-partitions| S[(Storage)]
   N1 <-->|exchange intermediates| N2
-  WH2[WH_BI_S · Small · 2 nodes] --> S
-  WH3[WH_ADHOC_XS · 1 node] --> S
+  WH2[WH_BI_S · Small] --> S
+  WH3[WH_ADHOC_XS · X-Small] --> S
 ```
 
 ## Numbers
 
 | Thing | Value | Source |
 |-------|-------|--------|
-| Nodes per size | double each step: XS 1 … 4XL 128 (credits/hour track the same table) | [warehouses-overview](https://docs.snowflake.com/en/user-guide/warehouses-overview) |
+| Compute per size | doubles each step; the published series is credits/hour, XS 1 … 6XL 512 (Gen1) | [warehouses-overview](https://docs.snowflake.com/en/user-guide/warehouses-overview) |
 | Billing | per second, 60 s minimum per start | warehouses-overview |
 | Isolation | warehouses never share nodes | intro-key-concepts |
 | Local cache | SSD per node, dropped on suspend | [considerations](https://docs.snowflake.com/en/user-guide/warehouses-considerations) |

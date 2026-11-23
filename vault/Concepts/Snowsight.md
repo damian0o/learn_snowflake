@@ -50,7 +50,7 @@ No direct cost; worksheet statements bill the worksheet's warehouse like any cli
 
 ## Traps
 
-- The Create Warehouse form pre-selects X-Large.
+- The Create Warehouse form pre-selects a size that is not SQL's X-Small default (X-Large in the docs table); check before Create.
 - Query Profile, not elapsed time, is the evidence for pruning and cache claims.
 - Classic console is gone; Snowsight is the only web UI.
 

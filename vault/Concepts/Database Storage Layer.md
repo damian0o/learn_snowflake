@@ -39,7 +39,7 @@ flowchart LR
 
 ```sql
 SELECT table_name, active_bytes, time_travel_bytes, failsafe_bytes
-FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_STORAGE_METRICS
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_STORAGE_METRICS            -- ACCOUNTADMIN or SNOWFLAKE.USAGE_VIEWER
 WHERE table_catalog = CURRENT_DATABASE()
 ORDER BY active_bytes DESC LIMIT 20;
 SHOW TABLES IN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1;   -- "bytes" column = compressed size, no warehouse

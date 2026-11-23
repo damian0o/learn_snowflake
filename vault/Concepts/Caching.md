@@ -53,7 +53,7 @@ Result and metadata hits → 0 warehouse credits (cloud services only, inside th
 
 - Three caches, two layers; only the SSD cache depends on the warehouse being up.
 - A benchmark without `USE_CACHED_RESULT = FALSE` measures the result cache; a benchmark on a warm warehouse measures SSD.
-- Result reuse is per account, not per user: another user with sufficient privileges gets the same persisted result.
+- Result reuse is decided by privileges, not identity: the role must have access to every table used; `SHOW` results reuse only for the same role.
 
 **vs Cloudera:** OS page cache on DataNodes and Impala's own buffers, invisible and unmanaged → three named caches with documented scope and lifetime. See [[Hadoop to Snowflake Rosetta Stone]].
 

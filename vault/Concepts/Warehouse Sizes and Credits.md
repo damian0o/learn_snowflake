@@ -4,7 +4,7 @@ docs: https://docs.snowflake.com/en/user-guide/warehouses-overview
 ---
 # Warehouse Sizes and Credits
 
-Ten sizes, each doubling nodes and credits per hour; billed per second with a 60-second minimum on every start, resize or added cluster.
+Ten sizes, each doubling credits per hour; billed per second with a 60-second minimum whenever nodes are provisioned: start, resume, upsizing, an added cluster.
 
 ```mermaid
 flowchart LR
@@ -12,36 +12,39 @@ flowchart LR
     direction LR
     A[resume · query 61 s] --> B[suspend] --> C[resume · query 30 s] --> D[suspend]
   end
-  A -. billed 61 s .-> X[sum: 61 + 60 = 121 s ≈ 0.034 credits]
+  A -. billed 61 s .-> X[sum: 61 + 60 = 121 s ≈ 0.034 Gen1 credits]
   C -. billed 60 s minimum .-> X
 ```
 
 ## Numbers
 
-| Size | Credits/hour (Gen1) | Nodes | Note |
-|------|---------------------|-------|------|
-| X-Small | 1 | 1 | SQL default |
-| Small | 2 | 2 | |
-| Medium | 4 | 4 | |
-| Large | 8 | 8 | |
-| X-Large | 16 | 16 | Snowsight form default |
-| 2X-Large | 32 | 32 | |
-| 3X-Large | 64 | 64 | |
-| 4X-Large | 128 | 128 | |
-| 5X-Large | 256 | 256 | AWS and Azure only |
-| 6X-Large | 512 | 512 | AWS and Azure only |
+| Size | Credits/hour (Gen1) | Note |
+|------|---------------------|------|
+| X-Small | 1 | `CREATE WAREHOUSE` default |
+| Small | 2 | |
+| Medium | 4 | |
+| Large | 8 | |
+| X-Large | 16 | pre-selected in the Snowsight form (check before Create) |
+| 2X-Large | 32 | |
+| 3X-Large | 64 | |
+| 4X-Large | 128 | |
+| 5X-Large | 256 | AWS and Azure only; Gen1 only |
+| 6X-Large | 512 | AWS and Azure only; Gen1 only |
+
+Compute doubles with each size step; the docs publish credits per hour, not node counts.
 
 | Rule | Value | Source |
 |------|-------|--------|
 | Granularity | per second after a 60 s minimum per start | warehouses-overview |
 | Resize | new nodes billed when provisioned; running queries finish on old nodes | [considerations](https://docs.snowflake.com/en/user-guide/warehouses-considerations) |
 | Multi-cluster | size credits × running clusters | [multi-cluster](https://docs.snowflake.com/en/user-guide/warehouses-multicluster) |
-| Gen2 | `GENERATION = '2'`; different credit rate (consumption table); not for 5XL/6XL | [gen2](https://docs.snowflake.com/en/user-guide/warehouses-gen2) |
+| Gen2 | default where available (`GENERATION = '2'`); higher rate per hour than the table above, published in the Service Consumption Table; read `generation` in `SHOW WAREHOUSES` | [gen2](https://docs.snowflake.com/en/user-guide/warehouses-gen2), [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse) |
 | Price of a credit | by edition, cloud, region, contract; not in any `ACCOUNT_USAGE` view → `ORGANIZATION_USAGE.RATE_SHEET_DAILY` | [cost](https://docs.snowflake.com/en/user-guide/cost-understanding-overall) |
 
 ## How it works
 
-- Size step → nodes ×2 → credits/hour ×2 → a query that parallelises well runs ≈ 2× faster for the same credits.
+- Size step → compute ×2 → credits/hour ×2 → a query that parallelises well runs ≈ 2× faster for the same credits.
+- Gen2 warehouse → same size names, higher credits/hour; a new account creates Gen2 by default where the region supports it.
 - A query that does not parallelise (single-partition scan, tiny result) → same seconds, double the credits.
 - Resume → 60 s charged even for a 2 s statement; a bursty 5 s job every 90 s is mostly minimums.
 - Spill to remote storage in Query Profile → size up one step and re-measure ([[Scaling Up vs Scaling Out]]).
@@ -53,6 +56,7 @@ flowchart LR
 SELECT start_time, warehouse_name, credits_used_compute, credits_used_cloud_services
 FROM TABLE(INFORMATION_SCHEMA.WAREHOUSE_METERING_HISTORY(DATEADD('day', -1, CURRENT_TIMESTAMP())))
 ORDER BY start_time DESC;     -- hourly rows, no latency, needs ACCOUNTADMIN or MONITOR USAGE
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';   -- "generation": 1 or 2 decides which rate applies
 ALTER WAREHOUSE WH_LEARN_XS SET WAREHOUSE_SIZE = SMALL;   -- then back to XSMALL
 ```
 

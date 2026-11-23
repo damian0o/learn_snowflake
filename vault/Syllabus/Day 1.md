@@ -3,7 +3,7 @@ tags: [syllabus, day1]
 ---
 # Day 1 - The big picture
 
-By the end: trace a query through the three layers, size and schedule a warehouse, read Query Profile for pruning, caching and spilling, and say where every credit of today's session is recorded.
+By the end: trace a query through the three layers, size and schedule a warehouse, read Query Profile, and name where today's credits are recorded.
 
 **Rhythm (about 3 hours):** notes in order (60 to 90 min) → hands-on in Snowsight (45 min) → flashcards deck `day1` (15 min) → `docker compose run --rm quiz day1` (20 min) → "Explain it to a teammate" on five notes (10 min).
 
@@ -43,8 +43,8 @@ flowchart LR
 8. [[Clustering Keys]] — multi-TB tables only; Automatic Clustering is serverless and bills with no warehouse.
 
 **Compute**
-9. [[Virtual Warehouse]] — states `STARTED` / `SUSPENDED` / `RESIZING`; SQL default X-Small, Snowsight form X-Large.
-10. [[Warehouse Sizes and Credits]] — XS 1 → 6XL 512 credits/hour, doubling; per second after 60 s.
+9. [[Virtual Warehouse]] — states `STARTED` / `SUSPENDED` / `RESIZING`; SQL default X-Small, the Snowsight form pre-selects larger: check before Create.
+10. [[Warehouse Sizes and Credits]] — XS 1 → 6XL 512 credits/hour (Gen1), doubling; Gen2 is the default where available and costs more per hour; per second after 60 s.
 11. [[Auto-suspend and Auto-resume]] — default 600 s, checked every ≈ 30 s, `0` never suspends; suspend drops the SSD cache.
 12. [[Scaling Up vs Scaling Out]] — long `execution_time` or spills → up; long `queued_overload_time` → out.
 13. [[Multi-cluster Warehouse]] — Enterprise+; Standard vs Economy policy; UI max 10 clusters, SQL up to 300.
@@ -80,7 +80,7 @@ Full table: [[Hadoop to Snowflake Rosetta Stone]].
 > These steps follow the docs but were written without an account to run them on. If a menu name or result differs, note it; it goes into the next revision.
 
 1. **Account and warehouse.** Complete [[Snowflake Account]]: a login and a warehouse `WH_LEARN_XS` (X-Small, auto-suspend 60 s).
-2. **Tour.** In [[Snowsight]] find: Projects → Worksheets; Monitoring → Query History; Admin → Warehouses; Admin → Cost Management. Open a worksheet, role `ACCOUNTADMIN`, warehouse `WH_LEARN_XS`.
+2. **Tour.** In [[Snowsight]] find: Projects → Worksheets; Monitoring → Query History; Admin → Warehouses; Admin → Cost Management. Open a worksheet, role `SYSADMIN` (owner of `WH_LEARN_XS`), warehouse `WH_LEARN_XS`. `ACCOUNTADMIN` is needed only in step 8.
 3. **Result cache.** Run this twice:
    ```sql
    SELECT COUNT(*), SUM(L_QUANTITY)
@@ -98,7 +98,7 @@ Full table: [[Hadoop to Snowflake Rosetta Stone]].
    FROM TABLE(INFORMATION_SCHEMA.WAREHOUSE_METERING_HISTORY(DATEADD('hour', -24, CURRENT_TIMESTAMP())))
    GROUP BY 1;
    ```
-   An X-Small with 60 s auto-suspend keeps the whole session under a fraction of one credit. The full read of metrics and price comes at the end of [[Day 3]]. See [[Credits and Billing]].
+   Needs `ACCOUNTADMIN` or `MONITOR USAGE`; on a team account without either, read Cost Management only and ask for `GRANT MONITOR USAGE ON ACCOUNT TO ROLE <your role>`. An X-Small with 60 s auto-suspend keeps the session under a fraction of one credit. See [[Credits and Billing]].
 
 ## Drill
 
@@ -116,7 +116,7 @@ Tick these off, then tick "Day 1" on [[00 Home]]:
 - [ ] The Spaced Repetition deck `day1` lists about 72 cards.
 - [ ] `quiz day1` runs end to end and shows a score.
 - [ ] `checks/run.sh` (or `docker compose run --rm checks`) ends with "all checks passed".
-- [ ] The hands-on steps worked, or you noted which step differed from the description.
+- [ ] The hands-on steps worked (step 8: ran the query, or asked for the grant), or you noted which step differed from the description.
 - [ ] Quiz score of 80 % or better.
 
 Next: [[Day 2]].
