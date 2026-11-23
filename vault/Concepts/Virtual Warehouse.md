@@ -4,42 +4,78 @@ docs: https://docs.snowflake.com/en/user-guide/warehouses-overview
 ---
 # Virtual Warehouse
 
-**In one sentence:** A virtual warehouse is a named cluster of compute that executes your queries and loads, which you create, size, start, suspend and pay for by the second.
+A named cluster of compute nodes that executes statements and is billed in credits per second while started.
 
-**Why it matters:** Warehouses are where the money goes and where performance is decided. A data engineer's daily Snowflake decisions are mostly warehouse decisions: how many, what size, when they sleep.
+```mermaid
+flowchart LR
+  S[Session<br/>USE WAREHOUSE] --> WH
+  CS[Cloud Services<br/>plan] --> WH
+  subgraph WH[WH_LEARN_XS · X-Small]
+    N1[node · SSD cache]
+  end
+  WH -->|reads micro-partitions| ST[(Storage)]
+  WH -->|credits/second| M[(WAREHOUSE_METERING_HISTORY)]
+```
 
-**Coming from Hadoop:** A YARN queue with a fixed pool of Spark executors, except you can create one per team or job in a second, resize it in a sentence, and switch it off when the job ends. The analogy breaks because a warehouse keeps no data of its own, so there is nothing to rebalance when you add, remove or resize them (see [[Hadoop to Snowflake Rosetta Stone]])
+```mermaid
+stateDiagram-v2
+  [*] --> SUSPENDED: CREATE … INITIALLY_SUSPENDED = TRUE
+  [*] --> STARTED: CREATE (default)
+  SUSPENDED --> STARTED: statement + AUTO_RESUME · 60 s minimum billed
+  STARTED --> SUSPENDED: idle ≥ AUTO_SUSPEND · cache dropped
+  STARTED --> RESIZING: ALTER … SET WAREHOUSE_SIZE
+  RESIZING --> STARTED: new nodes billed from provisioning
+```
+
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Default size, `CREATE WAREHOUSE` | X-Small | warehouses-overview |
+| Default size, Snowsight form | X-Large | warehouses-overview |
+| `AUTO_SUSPEND` default | 600 s; `0` or `NULL` = never | [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse) |
+| `AUTO_RESUME` default | `TRUE` | CREATE WAREHOUSE |
+| `INITIALLY_SUSPENDED` default | `FALSE` | CREATE WAREHOUSE |
+| Billing | per second, 60 s minimum per start | warehouses-overview |
+| `SHOW WAREHOUSES` state | `STARTED`, `SUSPENDED`, `RESIZING` | [SHOW WAREHOUSES](https://docs.snowflake.com/en/sql-reference/sql/show-warehouses) |
+| Types | `STANDARD`, `SNOWPARK-OPTIMIZED`, `ADAPTIVE`, `INTERACTIVE` | SHOW WAREHOUSES |
+| Generation | `generation` column; Gen1 credit table, Gen2 not default | SHOW WAREHOUSES, warehouses-overview |
+| Current warehouse per session | 1 | warehouses-overview |
 
 ## How it works
 
+- `CREATE WAREHOUSE` → object in Cloud Services, no nodes until `STARTED`.
+- Statement needs compute → `AUTO_RESUME` → nodes provisioned (seconds) → 60 s billed even if the query takes 2 s.
+- Plan arrives from [[Cloud Services Layer]] → nodes read only the pruned [[Micro-partitions]] → columns land in the node SSD ([[Warehouse Cache]]).
+- Idle for `AUTO_SUSPEND` seconds → `SUSPENDED` → SSD cache gone, credits stop ([[Auto-suspend and Auto-resume]]).
+- `ALTER … SET WAREHOUSE_SIZE` → running queries finish on old nodes, new and queued use the new size ([[Scaling Up vs Scaling Out]]).
+- `MAX_CLUSTER_COUNT > 1` (Enterprise) → extra clusters of the same size for queueing ([[Multi-cluster Warehouse]]).
+- One warehouse per workload: `WH_<TEAM>_<PURPOSE>_<SIZE>` (Day 3).
+
+## Probe
+
 ```sql
-CREATE WAREHOUSE WH_ANALYTICS_LOAD_S
-  WAREHOUSE_SIZE = SMALL
-  AUTO_SUSPEND = 300
-  AUTO_RESUME = TRUE
-  INITIALLY_SUSPENDED = TRUE
-  COMMENT = 'Batch loads for the analytics domain';
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';
+-- columns: "state", "size", "auto_suspend", "auto_resume", "running", "queued", "generation"
+ALTER WAREHOUSE WH_LEARN_XS SUSPEND;
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';          -- state = SUSPENDED, no warehouse needed to run SHOW
+SELECT 1;                                     -- no warehouse needed either
+SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM WHERE L_QUANTITY > 10;  -- resumes it
 ```
 
-A warehouse provides the CPU, memory and temporary storage for SQL execution: `SELECT`, DML, and `COPY INTO` loads and unloads all need a running warehouse. It is a cluster of nodes whose count doubles with each size step (see [[Warehouse Sizes and Credits]]).
+Snowsight → Admin » Warehouses → the same state, plus running and queued counts.
 
-Lifecycle:
+## Cost
 
-- **Created suspended or running.** `INITIALLY_SUSPENDED = TRUE` avoids paying the 60-second minimum for a warehouse you only wanted to define.
-- **Resumes on demand** when a query arrives, if `AUTO_RESUME` is on (default). See [[Auto-suspend and Auto-resume]].
-- **Suspends after idling** for `AUTO_SUSPEND` seconds (default 600). Suspended warehouses cost nothing.
-- **Resizes live.** `ALTER WAREHOUSE ... SET WAREHOUSE_SIZE = LARGE` adds nodes; queries already running are unaffected, queued and new queries use the new size. See [[Scaling Up vs Scaling Out]].
-- **Grows sideways** with extra clusters for concurrency on Enterprise edition. See [[Multi-cluster Warehouse]].
+Credits per second by size while `STARTED` → `ACCOUNT_USAGE.WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` (hourly rows). Idle share = `CREDITS_USED_COMPUTE − CREDITS_ATTRIBUTED_COMPUTE_QUERIES`. Sizes and the credit table: [[Warehouse Sizes and Credits]].
 
-A session uses one current warehouse (`USE WAREHOUSE`), and a user can have a default. Good practice is one warehouse per workload: loading, transformation, BI, ad-hoc, each named by the team standard (`WH_<TEAM>_<PURPOSE>_<SIZE>`, Day 3).
+## Traps
 
-Snowflake now offers **Generation 2 (Gen2)** standard warehouses with faster hardware; the credit table most material quotes is for Gen1. Check `GENERATION` in `SHOW WAREHOUSES` when comparing costs.
+- Snowsight pre-selects X-Large; SQL defaults to X-Small. Read the size before Create.
+- `SHOW`, `DESCRIBE`, result reuse and metadata-only aggregates run with the warehouse suspended.
+- Dropping a warehouse drops no data; it holds only a cache.
 
-## Gotchas / exam traps
-
-- A warehouse is compute only. It holds a cache (see [[Warehouse Cache]]), never the tables. Dropping it loses nothing.
-- Some statements do not need a warehouse at all: `SHOW`, `DESCRIBE`, and queries served from the [[Result Cache]] or [[Metadata Cache]].
-- Snowsight defaults new warehouses to X-Large; `CREATE WAREHOUSE` defaults to X-Small. Check the size before you click Create.
+**vs Cloudera:** a YARN queue with fixed executors → created, resized or suspended in seconds, per workload, holding no data, so nothing rebalances. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
@@ -52,4 +88,4 @@ Snowflake now offers **Generation 2 (Gen2)** standard warehouses with faster har
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
