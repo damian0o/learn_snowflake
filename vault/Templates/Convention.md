@@ -16,13 +16,25 @@ docs: <official docs URL this note was checked against>
 
 ## Why
 
-<the reasoning behind the rule>
+- <at most 3 bullets>
 
-## Coming from Hive
+## Probe
 
-<how the Hive-era habit translates>
+```sql
+-- a SHOW or INFORMATION_SCHEMA query that proves the rule holds (or lists violations)
+```
+
+## Cost
+
+No direct cost.
+
+**vs Hive:** <one line: what changes from the Hive-era habit>.
 
 ## Related
 
 - [[<the concept this names>]]
 - [[Naming - <sibling>]]
+
+## Explain it to a teammate (fill in yourself)
+
+>

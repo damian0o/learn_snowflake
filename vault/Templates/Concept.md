@@ -1,29 +1,50 @@
 ---
-tags: [concept, dayN, <area>]
-docs: <official docs URL this note was checked against>
+tags: [concept, day<N>, <area>]
+docs: <primary doc URL every number in this note was checked against>
 ---
 # {{title}}
 
-**In one sentence:** <what it is>
+<One sentence. Precise, no adjectives.>
 
-**Why it matters:** <what goes wrong if you don't know this>
+```mermaid
+flowchart LR
+  A[<thing>] --> B[<thing>]
+```
 
-**Coming from Hadoop:** <the Cloudera-world thing this replaces, and where the analogy breaks> (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| <default, limit or unit> | <value> | <doc page> |
 
 ## How it works
 
-<short, plain words; a diagram in text if it helps>
+- <mechanism, A → B → C; at most 8 bullets, no motivation>
 
-## Gotchas / exam traps
+## Probe
 
-- <trap>
+```sql
+-- what to run
+```
+
+Where to look (Snowsight path or view) → what you should see.
+
+## Cost
+
+How it is metered → `VIEW.COLUMN`. Or: No direct cost; see [[Credits and Billing]].
+
+## Traps
+
+- <at most 3>
+
+**vs Cloudera:** <one line of differences, not an analogy>. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
-- [[<parent idea>]]
-- [[<sibling>]]
-- [[<specific>]]
+- [[<note>]]
+- [[<note>]]
+- [[<note>]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
