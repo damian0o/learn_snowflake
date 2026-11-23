@@ -31,6 +31,7 @@ flowchart LR
 ## Read in this order
 
 **Architecture**
+
 1. [[What Snowflake Is]] — SaaS, one account per cloud region, serverless = Snowflake-managed compute still billed.
 2. [[Three-Layer Architecture]] — shared-disk storage, shared-nothing warehouses; only compute has knobs.
 3. [[Cloud Services Layer]] — auth, metadata, optimizer, result reuse; billed only above 10 % of daily warehouse credits.
@@ -38,11 +39,13 @@ flowchart LR
 5. [[Database Storage Layer]] — compressed, encrypted micro-partitions; billed on average daily bytes incl. Time Travel and Fail-safe.
 
 **Storage**
+
 6. [[Micro-partitions]] — 50–500 MB uncompressed, load order, per-column min/max and distinct counts.
 7. [[Query Pruning]] — metadata decides which micro-partitions are never read; `Partitions scanned / total` is the proof.
 8. [[Clustering Keys]] — multi-TB tables only; Automatic Clustering is serverless and bills with no warehouse.
 
 **Compute**
+
 9. [[Virtual Warehouse]] — states `STARTED` / `SUSPENDED` / `RESIZING`; SQL default X-Small, the Snowsight form pre-selects larger: check before Create.
 10. [[Warehouse Sizes and Credits]] — XS 1 → 6XL 512 credits/hour (Gen1), doubling; Gen2 is the default where available and costs more per hour; per second after 60 s.
 11. [[Auto-suspend and Auto-resume]] — default 600 s, checked every ≈ 30 s, `0` never suspends; suspend drops the SSD cache.
@@ -50,12 +53,14 @@ flowchart LR
 13. [[Multi-cluster Warehouse]] — Enterprise+; Standard vs Economy policy; UI max 10 clusters, SQL up to 300.
 
 **Caching**
+
 14. [[Caching]] — result reuse → metadata → warehouse SSD, in that order.
 15. [[Result Cache]] — byte-identical text, unchanged data, 24 h reset on reuse, 31 days max.
 16. [[Warehouse Cache]] — node SSD, gone on suspend, partly gone on downsize.
 17. [[Metadata Cache]] — whole-table `COUNT` / `MIN` / `MAX` and `SHOW` without a warehouse.
 
 **Platform**
+
 18. [[Snowflake Editions]] — Standard 1-day Time Travel; Enterprise adds multi-cluster, 90 days, masking; Business Critical adds keys and network.
 19. [[Cloud Providers and Regions]] — one cloud and region per account; egress is the transfer meter.
 20. [[Organizations and Accounts]] — `ORGADMIN` ≠ `ACCOUNTADMIN`; currency figures live in `ORGANIZATION_USAGE`.
