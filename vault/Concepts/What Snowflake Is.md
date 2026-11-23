@@ -4,38 +4,66 @@ docs: https://docs.snowflake.com/en/user-guide/intro-key-concepts
 ---
 # What Snowflake Is
 
-**In one sentence:** Snowflake is a fully managed cloud data platform, sold as a service, where storage and compute are separate and you pay for each only while you use it.
+A SaaS data platform: one account in one cloud region, driven entirely through SQL, with storage, compute and a coordination layer that scale and bill separately.
 
-**Why it matters:** Almost every design decision you will make, from how many warehouses to create to how to name schemas, follows from these three facts: nothing to install, storage and compute scale independently, and the meter runs per second.
+```mermaid
+flowchart LR
+  C[Clients<br/>Snowsight · drivers · connectors · CLI] -->|SQL over HTTPS| A
+  subgraph A[Account · one cloud · one region · one edition]
+    CS[Cloud Services]
+    W[Virtual warehouses]
+    S[(Database storage<br/>micro-partitions in S3 / Blob / GCS)]
+    CS --> W --> S
+  end
+  SL[Serverless features<br/>Snowpipe · Automatic Clustering · serverless tasks] --> S
+```
 
-**Coming from Hadoop:** Cloudera gave you a cluster you owned and kept running: HDFS for files, YARN for scheduling, Hive and Spark for processing. Snowflake gives you a database you log in to. There is no cluster to patch, no NameNode, no HDFS quota. The analogy breaks at cost: a Hadoop cluster costs the same idle or busy, while Snowflake storage is cheap and compute costs money only while a warehouse runs (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Clouds | AWS, Azure, Google Cloud | intro-key-concepts |
+| Delivery | SaaS; no install, no on-prem edition, no hardware to manage | intro-key-concepts |
+| Layers | 3: storage, compute (query processing), Cloud Services | intro-key-concepts |
+| Serverless features (Snowflake-managed compute, billed in credits) | Snowpipe, Automatic Clustering, serverless tasks, search optimization, materialized view maintenance | [metering](https://docs.snowflake.com/en/sql-reference/account-usage/metering_daily_history) `SERVICE_TYPE` |
+| Engine | Snowflake's own storage format and SQL engine; not Hadoop, Spark or Postgres | intro-key-concepts |
 
 ## How it works
 
-Snowflake is **software as a service**. You get an account in one cloud region (AWS, Azure or Google Cloud) and talk to it with SQL. Snowflake owns and operates everything underneath: the virtual machines, the object storage, the upgrades.
+- Client → HTTPS → [[Cloud Services Layer]]: authenticate, parse, optimise, prune.
+- Plan → a [[Virtual Warehouse]] you own → reads [[Micro-partitions]] from the [[Database Storage Layer]].
+- Storage grows without touching compute; compute is added per workload without touching storage ([[Three-Layer Architecture]]).
+- Serverless features run on Snowflake-managed compute: no warehouse of yours, still credits.
+- Account scope: one [[Snowflake Editions|edition]], one [[Cloud Providers and Regions|cloud and region]], inside one [[Organizations and Accounts|organization]].
 
-Three ideas carry the whole platform:
+## Probe
 
-1. **Storage and compute are separate.** Data lives once, in cloud object storage, compressed and columnar. Any number of compute clusters (virtual warehouses) can read it at the same time without copying it.
-2. **Compute is elastic and billed per second.** You create a warehouse, pick a size, and pay credits only while it runs. Suspend it and the meter stops.
-3. **A services layer coordinates everything.** Login, metadata, query planning, security and transactions happen in Cloud Services, which you never provision.
+```sql
+SELECT CURRENT_REGION(), CURRENT_ORGANIZATION_NAME(), CURRENT_ACCOUNT_NAME(), CURRENT_VERSION();
+```
 
-The result is one copy of the data, many independent workloads (loading, transformation, BI, data science) each on its own compute, none fighting the others for resources.
+Runs without a warehouse. `CURRENT_REGION()` returns e.g. `AWS_EU_CENTRAL_1`.
 
-## Gotchas / exam traps
+## Cost
 
-- Snowflake is not a database you install. There is no on-premises version and no Snowflake inside your Kubernetes cluster.
-- Snowflake is not built on Hadoop, Spark or any other existing engine. The storage format and the query engine are Snowflake's own.
-- "Serverless" in Snowflake marketing has a precise meaning: features (Snowpipe, Automatic Clustering, serverless tasks) that use Snowflake-managed compute and bill credits without a warehouse of yours.
+No direct cost. Three meters: warehouse credits, storage TB-month, data transfer → [[Credits and Billing]].
+
+## Traps
+
+- No local or on-prem Snowflake; emulators (fakesnow, LocalStack) are not Snowflake.
+- "Serverless" means Snowflake-managed compute that still bills credits, not "free".
+- Nothing here runs on Hadoop or Spark; Spark can connect to it as a client.
+
+**vs Cloudera:** the whole stack (HDFS, YARN, Hive, Impala, Spark, Ranger, CM) → one account you do not operate; your job starts at SQL and stops at SQL. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Three-Layer Architecture]]
-- [[Virtual Warehouse]]
+- [[Cloud Services Layer]]
+- [[Compute Layer]]
+- [[Database Storage Layer]]
 - [[Credits and Billing]]
-- [[Cloud Providers and Regions]]
-- [[Snowflake Editions]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

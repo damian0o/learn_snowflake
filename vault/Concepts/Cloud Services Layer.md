@@ -4,33 +4,70 @@ docs: https://docs.snowflake.com/en/user-guide/intro-key-concepts
 ---
 # Cloud Services Layer
 
-**In one sentence:** Cloud Services is the always-on coordination layer that authenticates you, keeps all metadata, parses and optimises every query, enforces access control and manages the infrastructure.
+The always-on coordination layer: authentication, access control, metadata, query parsing and optimisation, transactions, result reuse and infrastructure management; billed only above 10 % of the day's warehouse credits.
 
-**Why it matters:** It is why a Snowflake query can be planned, pruned and sometimes fully answered before a single warehouse starts, and it is the layer behind the 10 % billing rule that occasionally shows up on invoices.
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant CS as Cloud Services
+  participant W as Warehouse
+  participant S as Storage
+  C->>CS: SQL + session token
+  CS->>CS: authenticate · authorise (RBAC)
+  CS->>CS: parse · optimise · prune by micro-partition metadata
+  alt result reuse (same text, same data, same privileges)
+    CS-->>C: persisted result · no warehouse
+  else metadata only (COUNT(*), MIN, MAX, SHOW)
+    CS-->>C: answer from metadata · no warehouse
+  else
+    CS->>W: plan (auto-resume if suspended)
+    W->>S: read surviving micro-partitions
+    W-->>CS: result
+    CS-->>C: result (persisted 24 h)
+  end
+```
 
-**Coming from Hadoop:** Think Hive Metastore plus Ranger plus the YARN ResourceManager plus the Hive query compiler, rolled into one service you never run. The analogy breaks because Cloud Services also holds statistics for every micro-partition and the result cache, so it can answer some queries alone, which the Metastore never could (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Billing rule | charged only for the part above 10 % of the day's warehouse credits, per day, UTC | [cloud services cost](https://docs.snowflake.com/en/user-guide/cost-understanding-compute) |
+| Serverless credits | not part of the 10 % base | cost-understanding-compute |
+| Where the adjustment shows | `METERING_DAILY_HISTORY.CREDITS_ADJUSTMENT_CLOUD_SERVICES` (≤ 0), `CREDITS_BILLED` | [metering view](https://docs.snowflake.com/en/sql-reference/account-usage/metering_daily_history) |
+| Per-warehouse cloud services | `WAREHOUSE_METERING_HISTORY.CREDITS_USED_CLOUD_SERVICES`, latency ≤ 6 h | [view](https://docs.snowflake.com/en/sql-reference/account-usage/warehouse_metering_history) |
+| Knobs | none: not sized, not suspended, not visible | intro-key-concepts |
 
 ## How it works
 
-Cloud Services is a collection of services running on compute instances that Snowflake provisions. Its jobs:
+- Login → MFA/SSO → session → every statement authorised against roles and grants here.
+- Parse → optimise → compare predicates with per-micro-partition min/max → plan names only surviving micro-partitions ([[Query Pruning]]).
+- Before compute: [[Result Cache]] lookup, then [[Metadata Cache]] shortcut; either answers with zero warehouse credits.
+- Otherwise plan → [[Virtual Warehouse]]; Cloud Services starts and stops the nodes.
+- Transactions and the metadata store are here: `SHOW`, `DESCRIBE`, `INFORMATION_SCHEMA` never touch a warehouse.
+- Daily: cloud services credits summed → 10 % of warehouse credits subtracted → remainder billed.
 
-| Job | What it means for you |
-|-----|-----------------------|
-| Authentication and access control | logins, MFA, SSO, roles and grants are checked here |
-| Metadata management | every table, column, micro-partition statistic, grant and query history record |
-| Query parsing and optimisation | the plan, including which micro-partitions to skip (see [[Query Pruning]]) |
-| Infrastructure management | starting and stopping warehouse nodes, upgrades |
-| Transactions and the [[Result Cache]] | ACID coordination; identical queries served without compute |
+## Probe
 
-Because the metadata lives here, some statements never touch a warehouse: `SHOW TABLES`, `DESCRIBE`, and whole-table `COUNT(*)`, `MIN`, `MAX` (see [[Metadata Cache]]).
+```sql
+ALTER WAREHOUSE WH_LEARN_XS SUSPEND;
+SHOW TABLES IN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1;                      -- runs
+SELECT COUNT(*), MIN(L_SHIPDATE) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM;  -- runs
+SHOW WAREHOUSES LIKE 'WH_LEARN_XS';                                 -- still SUSPENDED
+```
 
-**Billing.** Cloud Services usage is measured in credits but charged only for the part that exceeds **10 % of the day's warehouse credits** (calculated daily, UTC). A day with 100 warehouse credits and 8 cloud-services credits costs 100; with 20 cloud-services credits it costs 110. Serverless compute does not count toward the 10 % base. Workloads with thousands of tiny metadata-heavy queries are the usual way to cross the line.
+Snowsight → Query History → both queries list no warehouse time.
 
-## Gotchas / exam traps
+## Cost
 
-- Cloud Services is not free. It is free up to 10 % of daily warehouse usage; the excess is billed.
-- The optimizer lives here, not in the warehouse. The warehouse executes the plan it is handed.
-- You cannot size, suspend or see the Cloud Services instances. If a question offers a way to configure them, it is a distractor.
+Cloud services credits per statement → `WAREHOUSE_METERING_HISTORY.CREDITS_USED_CLOUD_SERVICES`; billed amount after the 10 % rule → `METERING_DAILY_HISTORY.CREDITS_BILLED`. Thousands of tiny metadata-heavy statements per day are what cross the line.
+
+## Traps
+
+- Not free: free up to 10 % of daily warehouse credits, excess billed.
+- The optimizer is here; the warehouse only executes the plan it is handed.
+- Any question offering a way to size or suspend Cloud Services describes something that does not exist.
+
+**vs Cloudera:** Hive Metastore + Ranger + YARN ResourceManager + query compiler, run and patched by you → one managed layer that also holds per-micro-partition statistics and persisted results. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
@@ -38,8 +75,9 @@ Because the metadata lives here, some statements never touch a warehouse: `SHOW 
 - [[Compute Layer]]
 - [[Metadata Cache]]
 - [[Result Cache]]
+- [[Query Pruning]]
 - [[Credits and Billing]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

@@ -4,40 +4,72 @@ docs: https://docs.snowflake.com/en/user-guide/intro-key-concepts
 ---
 # Compute Layer
 
-**In one sentence:** The Compute layer (also called Query Processing) is where SQL runs: on virtual warehouses, independent MPP clusters that you create, size and pay for.
+The query processing layer: independent MPP clusters (virtual warehouses) that execute plans from Cloud Services against shared storage and are the only layer you size and pay for by the second.
 
-**Why it matters:** This is the only layer you control, and the only one with a meaningful bill attached to your decisions. Warehouse sizing, suspension and separation per workload are the daily work of a Snowflake engineer.
+```mermaid
+flowchart LR
+  P[plan from Cloud Services] --> WH
+  subgraph WH[WH_LOAD_M · Medium · 4 nodes]
+    direction TB
+    N1[node 1 · SSD] 
+    N2[node 2 · SSD]
+    N3[node 3 · SSD]
+    N4[node 4 · SSD]
+  end
+  N1 & N2 & N3 & N4 -->|share of surviving micro-partitions| S[(Storage)]
+  N1 <-->|exchange intermediates| N2
+  WH2[WH_BI_S · Small · 2 nodes] --> S
+  WH3[WH_ADHOC_XS · 1 node] --> S
+```
 
-**Coming from Hadoop:** YARN queues and the Spark executors they hand out. A warehouse is a cluster of nodes that processes one query in parallel, like a Spark job across executors. The analogy breaks because a warehouse holds no data permanently (only a cache), so you can have ten of them reading the same table at once, and you can switch one off at lunch without losing anything (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Nodes per size | double each step: XS 1 … 4XL 128 (credits/hour track the same table) | [warehouses-overview](https://docs.snowflake.com/en/user-guide/warehouses-overview) |
+| Billing | per second, 60 s minimum per start | warehouses-overview |
+| Isolation | warehouses never share nodes | intro-key-concepts |
+| Local cache | SSD per node, dropped on suspend | [considerations](https://docs.snowflake.com/en/user-guide/warehouses-considerations) |
+| Spill | `Bytes spilled to local storage`, then `… to remote storage` in Query Profile | [Query Profile](https://docs.snowflake.com/en/user-guide/ui-snowsight-activity) |
 
 ## How it works
 
-A query is planned in [[Cloud Services Layer]] and then executed on a **virtual warehouse**: a named cluster of compute nodes provisioned by Snowflake from the cloud provider. Nodes process micro-partitions in parallel (MPP), each handling a share of the data, and exchange intermediate results over the network.
+- Plan → nodes each take a slice of the surviving [[Micro-partitions]] → scan only referenced columns → exchange for joins and aggregates → result back to Cloud Services.
+- Memory exhausted → spill to node SSD → SSD exhausted → spill to remote storage (slow): the signal to [[Scaling Up vs Scaling Out|scale up]].
+- Queue forms when concurrent statements exceed the cluster's slots → the signal to scale out ([[Multi-cluster Warehouse]]).
+- SSD holds recently read columns across queries while the warehouse runs ([[Warehouse Cache]]).
+- One warehouse per workload (load, transform, BI, ad-hoc) → no contention between them; naming `WH_<TEAM>_<PURPOSE>_<SIZE>` (Day 3).
 
-Properties of this layer:
+## Probe
 
-- **Independent clusters.** Each warehouse is isolated. A heavy transformation on `WH_LOAD` does not slow dashboards on `WH_BI`.
-- **Shared storage.** Every warehouse reads the same [[Database Storage Layer]]. No copies, no sync.
-- **Elastic.** Resize up for heavier queries, add clusters for more concurrent users (see [[Scaling Up vs Scaling Out]]), suspend when idle (see [[Auto-suspend and Auto-resume]]).
-- **Local cache.** Nodes keep recently read table data on local disk for as long as the warehouse runs (see [[Warehouse Cache]]).
-- **Billed per second** in credits, with a 60-second minimum each start (see [[Warehouse Sizes and Credits]]).
+```sql
+SELECT query_id, warehouse_name, execution_time, queued_overload_time
+FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY(RESULT_LIMIT => 20))
+ORDER BY start_time DESC;
+```
 
-The common pattern is one warehouse per workload type: loading, transformation, BI, ad-hoc analysis, each sized and scheduled to fit.
+Snowsight → Query Profile of a heavy query → Spilling section: `Bytes spilled to local storage` / `… remote storage`; IO section: `Percentage scanned from cache`.
 
-## Gotchas / exam traps
+## Cost
 
-- "Query Processing layer" and "Compute layer" are the same thing; the docs moved to the second name.
-- A warehouse processes queries; it does not store your tables. Dropping a warehouse loses no data.
-- Two warehouses never share compute. If one is saturated, the other is unaffected.
+Credits per second × size × running clusters → `WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE`; per query → `QUERY_ATTRIBUTION_HISTORY.CREDITS_ATTRIBUTED_COMPUTE`. See [[Warehouse Sizes and Credits]].
+
+## Traps
+
+- "Query Processing layer" = "Compute layer"; the docs use both.
+- A warehouse holds no tables; dropping one loses nothing.
+- Remote spill is the expensive symptom; fix it by sizing up, not by adding clusters.
+
+**vs Cloudera:** Spark executors and Impala daemons sharing one YARN cluster → separate clusters per workload, created in seconds, with no HDFS locality to plan around. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Three-Layer Architecture]]
 - [[Virtual Warehouse]]
-- [[Cloud Services Layer]]
-- [[Database Storage Layer]]
+- [[Warehouse Sizes and Credits]]
+- [[Scaling Up vs Scaling Out]]
 - [[Warehouse Cache]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

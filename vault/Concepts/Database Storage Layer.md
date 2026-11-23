@@ -4,39 +4,69 @@ docs: https://docs.snowflake.com/en/user-guide/intro-key-concepts
 ---
 # Database Storage Layer
 
-**In one sentence:** Database Storage is Snowflake-managed cloud object storage holding one compressed, columnar, encrypted copy of every table as micro-partitions.
+Managed object storage in the account's region holding every table as compressed, encrypted, columnar micro-partitions, billed per TB-month of average daily compressed bytes including retained history.
 
-**Why it matters:** You never tune files, formats or directories again, and you pay for compressed bytes. But you also cannot reach the files directly, which changes how data gets in and out.
+```mermaid
+flowchart LR
+  L[load: COPY INTO · INSERT · Snowpipe] --> F[Snowflake format<br/>columnar · compressed · encrypted]
+  F --> MP[(micro-partitions<br/>S3 / Azure Blob / GCS · account region)]
+  MP --> W1[any warehouse] 
+  MP --> W2[any warehouse]
+  DML[UPDATE · DELETE · MERGE · reclustering] -->|new versions| MP
+  MP -->|old versions| TT[Time Travel<br/>0–90 days] --> FS[Fail-safe<br/>7 days] --> X[purged]
+```
 
-**Coming from Hadoop:** HDFS plus the Parquet or ORC files you laid out in it. The analogy breaks in two places: you chose Parquet row-group sizes, compression and directory partitioning, Snowflake chooses all of that for you; and you could `hdfs dfs -get` a file, while Snowflake storage is reachable only through SQL (or by unloading to a stage) (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Unit | micro-partition, 50–500 MB uncompressed | [micro-partitions](https://docs.snowflake.com/en/user-guide/tables-clustering-micropartitions) |
+| Time Travel | default 1 day; max 1 (Standard) / 90 (Enterprise+) | [editions](https://docs.snowflake.com/en/user-guide/intro-editions) |
+| Fail-safe | 7 days after Time Travel, all editions, Snowflake-only recovery | intro-editions |
+| Billing basis | average daily compressed bytes, incl. Time Travel, Fail-safe, internal stages | [storage cost](https://docs.snowflake.com/en/user-guide/cost-understanding-data-storage) |
+| Account view | `STORAGE_USAGE`: `STORAGE_BYTES`, `STAGE_BYTES`, `FAILSAFE_BYTES`, daily, latency ≤ 120 min | [view](https://docs.snowflake.com/en/sql-reference/account-usage/storage_usage) |
+| Per table | `TABLE_STORAGE_METRICS`: `ACTIVE_BYTES`, `TIME_TRAVEL_BYTES`, `FAILSAFE_BYTES`, `RETAINED_FOR_CLONE_BYTES` | [view](https://docs.snowflake.com/en/sql-reference/account-usage/table_storage_metrics) |
 
 ## How it works
 
-When you load data, Snowflake rewrites it into its own internal format: **columnar, compressed, encrypted**, split into [[Micro-partitions]] of 50 to 500 MB uncompressed. These land in the cloud provider's object storage (S3, Azure Blob, Google Cloud Storage) in the region of your account.
+- Load → rows rewritten into Snowflake's format → [[Micro-partitions]] → object storage; the bucket is Snowflake's, not yours.
+- Every [[Virtual Warehouse]] reads the same bytes; nothing is copied per cluster.
+- Writes never modify a micro-partition; new versions are written and old ones move through Time Travel → Fail-safe → purge (Day 2).
+- Clone = new table pointing at the same micro-partitions; bytes are billed once until either side diverges (Day 2).
+- Exit paths: SQL result sets, `COPY INTO <stage>`, secure data sharing. No file-level access.
 
-Snowflake manages everything about the stored data: organisation, file size, structure, compression, metadata and statistics. You see tables and columns; you never see files.
+## Probe
 
-What the storage layer gives you:
+```sql
+SELECT table_name, active_bytes, time_travel_bytes, failsafe_bytes
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_STORAGE_METRICS
+WHERE table_catalog = CURRENT_DATABASE()
+ORDER BY active_bytes DESC LIMIT 20;
+SHOW TABLES IN SNOWFLAKE_SAMPLE_DATA.TPCH_SF1;   -- "bytes" column = compressed size, no warehouse
+```
 
-- **One copy, many readers.** Every [[Virtual Warehouse]] reads the same bytes.
-- **Immutability.** Micro-partitions are never edited in place. `UPDATE` and `DELETE` write new partitions and retire old ones, which is what makes Time Travel, Fail-safe and zero-copy cloning possible (Day 2).
-- **Statistics for free.** Each micro-partition carries min/max per column and more, which the optimizer uses for [[Query Pruning]].
-- **Billing by compressed size.** Storage costs a flat rate per TB per month, measured as the average daily on-disk (compressed) bytes, including Time Travel and Fail-safe retention.
+Snowsight → Admin » Cost management » Consumption → Usage type = Storage.
 
-## Gotchas / exam traps
+## Cost
 
-- You cannot access Snowflake-stored data as files. Data leaves through SQL, `COPY INTO <stage>` or sharing, never by reading the bucket.
-- Storage is billed on compressed bytes. Columnar compression often gives 3 to 5 times reduction over raw CSV.
-- Storage includes historical data kept for Time Travel and Fail-safe, so a table you keep rewriting costs more than its current size.
+TB-month of `STORAGE_USAGE.STORAGE_BYTES + STAGE_BYTES + FAILSAFE_BYTES`, averaged per day. Rewrite-heavy tables cost active + retained versions.
+
+## Traps
+
+- No path to the files: not via the bucket, not via a connector.
+- Billed compressed; columnar compression typically shrinks CSV several times.
+- A table rewritten daily with 90-day Time Travel stores up to 90 versions.
+
+**vs Cloudera:** HDFS directories and Parquet files you laid out, replicated 3× on your disks → format, layout and durability owned by Snowflake; data leaves only through SQL, unload or share. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
 - [[Three-Layer Architecture]]
 - [[Micro-partitions]]
 - [[Query Pruning]]
-- [[Compute Layer]]
 - [[Credits and Billing]]
+- [[Compute Layer]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>

@@ -4,50 +4,73 @@ docs: https://docs.snowflake.com/en/user-guide/intro-key-concepts
 ---
 # Three-Layer Architecture
 
-**In one sentence:** Snowflake is built from three independent layers: Database Storage at the bottom, Compute (virtual warehouses) in the middle, and Cloud Services on top.
+Storage, compute and Cloud Services as three independently scaled layers: shared-disk storage read by shared-nothing warehouse clusters, coordinated by a layer you never provision.
 
-**Why it matters:** Every performance, cost and security question maps to one layer. Knowing which layer does what tells you where to look and what you are paying for.
+```mermaid
+flowchart TB
+  subgraph CS[Cloud Services · managed by Snowflake · billed above 10 % of daily warehouse credits]
+    A[authentication · access control] --- M[metadata · statistics · result cache] --- O[optimizer · transactions · infrastructure]
+  end
+  subgraph CO[Compute · you create and size · credits/second]
+    W1[WH_LOAD_M] 
+    W2[WH_BI_S]
+    W3[WH_ADHOC_XS]
+  end
+  subgraph ST[Database storage · managed · TB-month compressed]
+    MP[(micro-partitions in object storage)]
+  end
+  CS -->|plans| CO
+  W1 --> MP
+  W2 --> MP
+  W3 --> MP
+```
 
-**Coming from Hadoop:** In Cloudera the three jobs were also split, HDFS stored, YARN plus Spark or Hive computed, the Hive Metastore and Ranger coordinated, but they all ran on the same nodes you owned. In Snowflake the layers run on separate infrastructure that scales on its own. The analogy breaks because Hadoop compute was data-local (move the code to the data) while Snowflake compute reads from shared cloud storage over the network, relying on columnar pruning and caches to make that fast (see [[Hadoop to Snowflake Rosetta Stone]])
+## Numbers
+
+| Thing | Value | Source |
+|-------|-------|--------|
+| Layers you provision | 1 (compute) | intro-key-concepts |
+| Layers billed | 3: credits, TB-month, Cloud Services excess over 10 % of daily warehouse credits | [cost overview](https://docs.snowflake.com/en/user-guide/cost-understanding-overall) |
+| Docs name for the middle layer | "query processing" (compute); older material: "Query Processing layer" | intro-key-concepts |
+| Architecture label | hybrid of shared-disk and shared-nothing | intro-key-concepts |
 
 ## How it works
 
-```
- ┌──────────────────────────────────────────────┐
- │  CLOUD SERVICES  (the brain)                 │  login, metadata, optimizer,
- │  authentication · metadata · optimizer ·     │  access control, transactions,
- │  access control · transactions · result cache│  infrastructure management
- ├──────────────────────────────────────────────┤
- │  COMPUTE  (the muscles)                      │  virtual warehouses: MPP
- │  [WH_LOAD]  [WH_BI]  [WH_DS]  [WH_ADHOC]     │  clusters you size, start,
- │                                              │  suspend and pay for
- ├──────────────────────────────────────────────┤
- │  DATABASE STORAGE  (the memory)              │  one copy of all data in cloud
- │  micro-partitions in S3 / Blob / GCS         │  object storage, columnar,
- │                                              │  compressed, encrypted
- └──────────────────────────────────────────────┘
+- Shared-disk: one copy of every [[Micro-partitions|micro-partition]] in object storage, readable by every warehouse ([[Database Storage Layer]]).
+- Shared-nothing: each [[Virtual Warehouse]] is an MPP cluster; nodes take a share of the pruned micro-partitions and exchange intermediates over the network ([[Compute Layer]]).
+- [[Cloud Services Layer]] holds the metadata, so pruning and result reuse happen before any warehouse starts.
+- Layers scale alone: more data → no compute change; more concurrency → more or bigger warehouses; no re-sharding.
+- Isolation: warehouses never share compute, so `WH_LOAD_M` cannot slow `WH_BI_S`.
+
+## Probe
+
+```sql
+SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM;             -- Cloud Services only (metadata)
+SELECT COUNT(*) FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM WHERE L_QUANTITY > 10;  -- needs a warehouse
 ```
 
-Snowflake calls this a **hybrid of shared-disk and shared-nothing**. Shared-disk: there is one central data repository that every compute node can reach. Shared-nothing: a query runs on an MPP cluster (a warehouse) whose nodes each process a portion of the data locally, in parallel. You get the simplicity of one copy of the data and the speed of parallel processing.
+Snowsight → Query History: the first shows no warehouse time; the second shows `WH_LEARN_XS` and, in Query Profile, `Partitions scanned` (Cloud Services pruning) and `Percentage scanned from cache` (warehouse SSD).
 
-Each layer scales independently. Adding data does not need more compute. Adding users or workloads means adding or enlarging warehouses, not re-sharding storage.
+## Cost
 
-Read the three layers in detail: [[Database Storage Layer]], [[Compute Layer]], [[Cloud Services Layer]].
+Per layer → `WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` (compute), `STORAGE_USAGE.STORAGE_BYTES` (storage), `METERING_DAILY_HISTORY.CREDITS_ADJUSTMENT_CLOUD_SERVICES` (the 10 % rule). See [[Credits and Billing]].
 
-## Gotchas / exam traps
+## Traps
 
-- The docs name the middle layer **Compute**. Older material and many exam questions call it **Query Processing**. Same layer.
-- Only the Compute layer is something you create and size. Storage and Cloud Services are managed entirely by Snowflake.
-- Hybrid means both, not a choice. If a question asks whether Snowflake is shared-disk or shared-nothing, the answer is a hybrid of the two.
+- "Query Processing" and "Compute" name the same layer.
+- Only compute is yours to size; storage and Cloud Services have no knobs.
+- Hybrid means both models at once, not a choice between them.
+
+**vs Cloudera:** HDFS + YARN + Metastore on the same nodes, scaled together → three layers scaled and billed apart; no DataNodes to balance when compute changes. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 
-- [[What Snowflake Is]]
 - [[Database Storage Layer]]
 - [[Compute Layer]]
 - [[Cloud Services Layer]]
+- [[What Snowflake Is]]
 - [[Virtual Warehouse]]
 
 ## Explain it to a teammate (fill in yourself)
 
-> 
+>
