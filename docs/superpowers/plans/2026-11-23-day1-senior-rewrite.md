@@ -18,7 +18,7 @@
 - Required headings in `Concepts/`: `## Numbers`, `## How it works`, `## Probe`, `## Cost`, `## Traps`, `## Related`. In `Conventions/`: `**Rule:**` line plus `## Examples`, `## Why`, `## Probe`, `## Related`.
 - Banned phrases (case-insensitive) in `Concepts/`, `Conventions/`, `Syllabus/`: `seamless`, `effortless`, `elastic`, `in one sentence`, `why it matters`, `coming from hadoop`, `the brain`, `the muscles`.
 - Every number in a note comes from the `docs:` page or an inline-linked doc page; where this plan says *verify*, the executor opens the page before writing the number and ledgers any deviation.
-- Each note ends with `**vs Cloudera:** …` one line, `## Related` with ≥ 3 wikilinks, and the unchanged `## Explain it to a teammate (fill in yourself)` block with an empty `>` line.
+- Each note ends with `## Related` with ≥ 3 wikilinks (the `vs Cloudera` line was dropped on 2026-11-24 at the learner's request), and the unchanged `## Explain it to a teammate (fill in yourself)` block with an empty `>` line.
 - Commits end with the attribution lines in force for this session.
 
 ## Review Focus

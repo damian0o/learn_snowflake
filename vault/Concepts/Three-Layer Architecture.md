@@ -61,7 +61,6 @@ Per layer → `WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` (compute), `STOR
 - Only compute is yours to size; storage and Cloud Services have no knobs.
 - Hybrid means both models at once, not a choice between them.
 
-**vs Cloudera:** HDFS + YARN + Metastore on the same nodes, scaled together → three layers scaled and billed apart; no DataNodes to balance when compute changes. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

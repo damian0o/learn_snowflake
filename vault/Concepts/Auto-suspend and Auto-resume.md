@@ -59,7 +59,6 @@ Idle credits = `WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE − CREDITS_ATTR
 - Suspend wipes the SSD cache; a shorter timeout makes repeated queries slower as well as cheaper.
 - A query that "hangs" for a couple of seconds before starting is the warehouse resuming.
 
-**vs Cloudera:** a cluster that idled at full cost all night → an idle timer per warehouse, and an explicit trade between cache warmth and minutes billed. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

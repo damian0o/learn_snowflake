@@ -55,7 +55,6 @@ No direct meter. Shows up as fewer warehouse seconds per query; the counter-cost
 - Holds columns, not results; with result reuse on, run 2 never reaches it.
 - Per warehouse: two warehouses on one table each warm their own SSD.
 
-**vs Cloudera:** OS page cache on DataNodes, kept warm by a cluster that never stopped → explicit per-warehouse SSD wiped by suspend, so the idle timeout is a performance setting. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

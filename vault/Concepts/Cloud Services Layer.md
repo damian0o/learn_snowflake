@@ -67,7 +67,6 @@ Cloud services credits per statement → `WAREHOUSE_METERING_HISTORY.CREDITS_USE
 - The optimizer is here; the warehouse only executes the plan it is handed.
 - Any question offering a way to size or suspend Cloud Services describes something that does not exist.
 
-**vs Cloudera:** Hive Metastore + Ranger + YARN ResourceManager + query compiler, run and patched by you → one managed layer that also holds per-micro-partition statistics and persisted results. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

@@ -54,7 +54,6 @@ No direct cost. Three meters: warehouse credits, storage TB-month, data transfer
 - "Serverless" means Snowflake-managed compute that still bills credits, not "free".
 - Nothing here runs on Hadoop or Spark; Spark can connect to it as a client.
 
-**vs Cloudera:** the whole stack (HDFS, YARN, Hive, Impala, Spark, Ranger, CM) → one account you do not operate; your job starts at SQL and stops at SQL. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

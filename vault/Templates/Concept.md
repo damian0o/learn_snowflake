@@ -37,7 +37,6 @@ How it is metered → `VIEW.COLUMN`. Or: No direct cost; see [[Credits and Billi
 
 - <at most 3>
 
-**vs Cloudera:** <one line of differences, not an analogy>. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

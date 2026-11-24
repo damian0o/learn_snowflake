@@ -72,7 +72,6 @@ This is the compute meter: `WAREHOUSE_METERING_HISTORY.CREDITS_USED_COMPUTE` (ho
 - The 60 s minimum applies per resume, so a short `AUTO_SUSPEND` on a bursty workload can cost more than a longer one.
 - Credits are the unit; the currency price is the rate sheet, not the docs.
 
-**vs Cloudera:** node-hours of a cluster sized for peak and paid at idle → seconds × size, chosen per job and changed mid-day. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

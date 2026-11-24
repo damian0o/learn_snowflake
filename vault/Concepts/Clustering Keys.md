@@ -62,7 +62,6 @@ Serverless credits → `AUTOMATIC_CLUSTERING_HISTORY.CREDITS_USED`; storage for 
 - It bills with no warehouse running; watch `AUTO_CLUSTERING` in the daily metering.
 - A cloned table needs `RESUME RECLUSTER`.
 
-**vs Cloudera:** `CLUSTERED BY … SORTED BY` buckets you rebuilt on every write → a declared key maintained by a background service billed in credits. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

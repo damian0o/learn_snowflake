@@ -54,7 +54,6 @@ Skipped micro-partitions cost nothing; scanned ones cost warehouse seconds → `
 - Any function around the filtered column, or a `LIKE` with a leading wildcard, turns the filter into a full scan.
 - `Partitions scanned` ≪ `Partitions total` is the proof; a low number alone proves nothing.
 
-**vs Cloudera:** Hive pruned only on `PARTITIONED BY` columns you chose at design time → every column has min/max per micro-partition, no DDL. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

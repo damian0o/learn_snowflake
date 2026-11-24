@@ -58,7 +58,6 @@ Up: credits/second doubles per step → `CREDITS_USED_COMPUTE`. Out: `credits = 
 - Resizing interrupts nothing; downsizing loses part of the cache.
 - Out needs Enterprise; up works on every edition.
 
-**vs Cloudera:** bigger executors vs more executors inside one queue that other jobs also fight for → two independent knobs on an isolated cluster, applied in one `ALTER`. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

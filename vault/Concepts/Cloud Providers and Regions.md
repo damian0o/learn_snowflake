@@ -53,7 +53,6 @@ Egress bytes × provider rate → `DATA_TRANSFER_HISTORY.BYTES_TRANSFERRED`; Sno
 - Egress applies to unloads, replication, external access calls and cross-region shares, not to loading.
 - Use the `<orgname>-<account_name>` identifier in every driver; the locator still works but is legacy.
 
-**vs Cloudera:** one datacenter, free internal traffic → region choice is a cost decision for every outbound feed. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

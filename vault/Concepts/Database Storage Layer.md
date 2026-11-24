@@ -57,7 +57,6 @@ TB-month of `STORAGE_USAGE.STORAGE_BYTES + STAGE_BYTES + FAILSAFE_BYTES`, averag
 - Billed compressed; columnar compression typically shrinks CSV several times.
 - A table rewritten daily with 90-day Time Travel stores up to 90 versions.
 
-**vs Cloudera:** HDFS directories and Parquet files you laid out, replicated 3× on your disks → format, layout and durability owned by Snowflake; data leaves only through SQL, unload or share. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

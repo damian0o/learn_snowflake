@@ -55,7 +55,6 @@ Price per credit and per TB rises by edition → `ORGANIZATION_USAGE.RATE_SHEET_
 - Multi-cluster, materialized views and masking start at Enterprise, not Business Critical.
 - Business Critical was once named Enterprise for Sensitive Data (ESD).
 
-**vs Cloudera:** per-node licence tiers for the whole cluster → a per-account tier you can raise with a support ticket, with price per credit as the lever. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

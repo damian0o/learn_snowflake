@@ -55,7 +55,6 @@ Result and metadata hits → 0 warehouse credits (cloud services only, inside th
 - A benchmark without `USE_CACHED_RESULT = FALSE` measures the result cache; a benchmark on a warm warehouse measures SSD.
 - Result reuse is decided by privileges, not identity: the role must have access to every table used; `SHOW` results reuse only for the same role.
 
-**vs Cloudera:** OS page cache on DataNodes and Impala's own buffers, invisible and unmanaged → three named caches with documented scope and lifetime. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

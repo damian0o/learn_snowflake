@@ -55,7 +55,6 @@ No direct cost; the organization is the billing unit → `ORGANIZATION_USAGE.USA
 - Warehouses and roles are account-level; they do not live inside a database.
 - Account names cannot contain hyphens; the identifier joins org and account with one.
 
-**vs Cloudera:** one cluster, environments split by HDFS path and Ranger policy → account or database per environment, with zero-copy clone from PROD to DEV. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

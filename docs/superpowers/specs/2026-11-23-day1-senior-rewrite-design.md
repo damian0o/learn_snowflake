@@ -38,7 +38,7 @@ Audience: senior data engineer, Cloudera background, new to Snowflake only.
 - **Prose budget:** at most 300 words of prose per concept note and 900 per syllabus day note. Prose is every word outside code fences, Mermaid blocks, tables, frontmatter and the Explain box. List items and callouts count: bullets are the medium, so they are budgeted.
 - **Show, then tell:** if a thing has a structure or a sequence, it is a Mermaid diagram (`flowchart` or `sequenceDiagram`). If it has values, it is a table. Prose only for what neither can carry.
 - **Official names only:** Cloud Services layer, query processing layer, virtual warehouse, micro-partition, result reuse, warehouse (local disk) cache, metadata, clustering depth, credit, `ACCOUNT_USAGE`. No invented shorthand.
-- **No basics:** nothing the audience assumption already covers. The Hadoop bridge is one line of *differences* ("vs Cloudera: …"), not an analogy.
+- **No basics:** nothing the audience assumption already covers. No Hadoop comparison inside notes: the Cloudera-to-Snowflake mapping lives in one separate article (today the Rosetta Stone; expanded into a standalone "Hadoop to Snowflake" article in increment 3), linked once from Home and from each Day note.
 - **Observable:** every note has at least one thing to run and the output to expect.
 - **Cost:** every note says how its subject is metered and where that shows up (view and column), or states "no direct cost" explicitly.
 
@@ -106,7 +106,7 @@ The six query drafts for this note are in Appendix A so they survive until incre
 
 - Opening: one Mermaid `flowchart` of a query's path: client → Cloud Services (auth → parse → optimise → prune → result reuse check) → warehouse (SSD cache → remote storage) → result → result cache; the credit meter drawn on the warehouse box, the 10 % rule on Cloud Services.
 - One section per layer and theme (Cloud Services, Storage, Compute, Caching, Platform, Cost), each 3 to 6 bullets with the wikilinks, no narrative paragraphs.
-- Hadoop bridge collapses to a 5-row table.
+- No Hadoop bridge section; one pointer to the Rosetta Stone in the preamble.
 - Hands-on: the existing lab with the author's warning kept. Step 8 (Cost Management) stays as the only cost step and points forward to the capstone note.
 - Drill and Acceptance keep their steps; card counts are updated to the new totals.
 
@@ -146,7 +146,7 @@ Scoped by `--day N` like the other checks. Added to `checks/run.sh` after `check
 - **A money note on Day 1?** No. Cost is a one-line section per note on Day 1; the metrics and price evaluation come once, at the end of phase 1. Learner's call.
 
 - **Keep the "Explain it to a teammate" box?** Yes. It is the only part of a note the learner writes.
-- **Keep the "Coming from Hadoop" paragraph?** No. One `vs Cloudera` line of differences; the Rosetta Stone keeps the table.
+- **Keep the "Coming from Hadoop" paragraph?** No, and (learner's call, 2026-11-24) no per-note `vs Cloudera` line either. The comparison is one separate article; notes never repeat it.
 - **Rename notes to match official terms?** No renames; `Compute Layer` already says "query processing layer" in its first line.
 
 ## Appendix A: query drafts for the capstone note

@@ -7,7 +7,7 @@ By the end: trace a query through the three layers, size and schedule a warehous
 
 **Rhythm (about 3 hours):** notes in order (60 to 90 min) → hands-on in Snowsight (45 min) → flashcards deck `day1` (15 min) → `docker compose run --rm quiz day1` (20 min) → "Explain it to a teammate" on five notes (10 min).
 
-Before you start: [[Obsidian Setup]], [[Snowflake Account]], [[Quiz Runner]].
+Before you start: [[Obsidian Setup]], [[Snowflake Account]], [[Quiz Runner]]. From Cloudera? Read [[Hadoop to Snowflake Rosetta Stone]] once.
 
 ## One query, three layers
 
@@ -66,18 +66,6 @@ flowchart LR
 20. [[Organizations and Accounts]] — `ORGADMIN` ≠ `ACCOUNTADMIN`; currency figures live in `ORGANIZATION_USAGE`.
 21. [[Snowsight]] — Query History → Query Profile: the four numbers to read.
 22. [[Credits and Billing]] — three meters; only `METERING_DAILY_HISTORY.CREDITS_BILLED` is what you pay. The full metrics and price read-out is the last stop of [[Day 3]].
-
-## Hadoop bridge
-
-| Cloudera | Snowflake | What changes |
-|----------|-----------|--------------|
-| HDFS + Parquet/ORC files | [[Database Storage Layer]], [[Micro-partitions]] | no files, no directories, no direct reads |
-| YARN queues, Spark executors | [[Virtual Warehouse]] | per-workload clusters, seconds to create, hold no data |
-| Hive Metastore, Ranger, ResourceManager | [[Cloud Services Layer]] | also holds per-micro-partition stats and persisted results |
-| Hive partitions and buckets | [[Query Pruning]], [[Clustering Keys]] | every column prunes; clustering only for multi-TB tables |
-| Hive/Impala planner | optimizer in Cloud Services | prunes from metadata before compute starts |
-
-Full table: [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Hands-on in Snowsight
 

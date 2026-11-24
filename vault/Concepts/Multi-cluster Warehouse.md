@@ -58,7 +58,6 @@ Snowsight → Admin » Warehouses → cluster count and queued statements per wa
 - `MIN = MAX` is maximized mode and bills every cluster whenever the warehouse is started.
 - UI caps at 10 clusters; SQL allows up to 300 for small sizes.
 
-**vs Cloudera:** YARN queue capacity shared by every job → identical isolated clusters added per queue depth and removed when it drains. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

@@ -60,7 +60,6 @@ Credits per second × size × running clusters → `WAREHOUSE_METERING_HISTORY.C
 - A warehouse holds no tables; dropping one loses nothing.
 - Remote spill is the expensive symptom; fix it by sizing up, not by adding clusters.
 
-**vs Cloudera:** Spark executors and Impala daemons sharing one YARN cluster → separate clusters per workload, created in seconds, with no HDFS locality to plan around. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

@@ -62,7 +62,6 @@ Run 2: milliseconds, Query Profile = `Query Result Reuse`. Change one character 
 - Reclustering is a data change even though no row changed.
 - Privileges decide, not identity: any role with access to all tables used can reuse; `SHOW` output only for the same role.
 
-**vs Cloudera:** nothing equivalent in Hive or Impala; result caching lived in the BI tool. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

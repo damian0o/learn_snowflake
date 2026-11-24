@@ -55,7 +55,6 @@ Query History: the first query shows no warehouse; the second shows `WH_LEARN_XS
 - Statistics are never stale; there is nothing to recompute.
 - Lives in Cloud Services beside the [[Result Cache]], not on the warehouse.
 
-**vs Cloudera:** Hive statistics via `ANALYZE TABLE … COMPUTE STATISTICS`, stale the moment data landed → maintained on every write, exact, and usable for answers not just plans. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

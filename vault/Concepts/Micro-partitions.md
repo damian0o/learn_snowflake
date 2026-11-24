@@ -61,7 +61,6 @@ Storage = compressed bytes of all retained micro-partitions, averaged daily → 
 - No `PARTITION BY` on standard tables; partitioning is automatic.
 - Frequent row updates rewrite whole micro-partitions and keep the old ones; storage grows beyond the table's live size.
 
-**vs Cloudera:** Hive partition directories you named and repaired → automatic, invisible blocks with per-column statistics; no `MSCK REPAIR`, no small-files problem to manage. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

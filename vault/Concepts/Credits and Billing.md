@@ -56,7 +56,6 @@ This note is the map. The only number that is money is `CREDITS_BILLED` × the r
 - Snowsight and most views show cloud-services credits before the 10 % adjustment.
 - Storage bills compressed bytes plus retained history, so a daily full rewrite with long Time Travel multiplies the bill.
 
-**vs Cloudera:** capex plus node-hours regardless of load → three metered lines you can read per hour, per table and per transfer. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

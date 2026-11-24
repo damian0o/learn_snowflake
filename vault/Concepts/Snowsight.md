@@ -54,7 +54,6 @@ No direct cost; worksheet statements bill the worksheet's warehouse like any cli
 - Query Profile, not elapsed time, is the evidence for pruning and cache claims.
 - Classic console is gone; Snowsight is the only web UI.
 
-**vs Cloudera:** Hue for SQL plus Cloudera Manager for the cluster → one UI, and anything it shows is reachable by SQL for scripting in phase 2. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

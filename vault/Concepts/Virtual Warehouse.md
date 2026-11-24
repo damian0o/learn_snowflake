@@ -75,7 +75,6 @@ Credits per second by size while `STARTED` → `ACCOUNT_USAGE.WAREHOUSE_METERING
 - `SHOW`, `DESCRIBE`, result reuse and metadata-only aggregates run with the warehouse suspended.
 - Dropping a warehouse drops no data; it holds only a cache.
 
-**vs Cloudera:** a YARN queue with fixed executors → created, resized or suspended in seconds, per workload, holding no data, so nothing rebalances. See [[Hadoop to Snowflake Rosetta Stone]].
 
 ## Related
 

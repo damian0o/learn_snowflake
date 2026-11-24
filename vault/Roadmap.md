@@ -24,7 +24,7 @@ Three phases, each with its own design document in `docs/superpowers/specs/`. Ph
 **Builder**
 
 - [ ] Increment 2, [[Day 2]]: object hierarchy, table and view kinds, stages and `COPY INTO`, Snowpipe, streams and tasks, Time Travel, Fail-safe, cloning, RBAC and the role hierarchy, resource monitors. "Getting data out" as its own cluster: unloading, secure data sharing, connectors for consumers such as Pega, external access for calling APIs such as AEP. Adds Day 2 rows to the [[Hadoop to Snowflake Rosetta Stone]], Day 2 [[Mnemonics]], flashcards and `quiz/bank/day2.yaml`.
-- [ ] Increment 3, [[Day 3]]: identifier rules, Hive habit translations, one convention note per object class with the RAW / STAGING / INTERMEDIATE / MARTS / PUBLISH layers, warehouse and role naming. Ships `project/setup/00_team_skeleton.sql`, `99_teardown.sql` and `quiz/bank/cumulative.yaml`.
+- [ ] Increment 3, [[Day 3]]: expand [[Hadoop to Snowflake Rosetta Stone]] into the one standalone Cloudera-to-Snowflake article (notes no longer carry per-concept comparisons); identifier rules, Hive habit translations, one convention note per object class with the RAW / STAGING / INTERMEDIATE / MARTS / PUBLISH layers, warehouse and role naming. Ships `project/setup/00_team_skeleton.sql`, `99_teardown.sql` and `quiz/bank/cumulative.yaml`.
 - [ ] Full unscoped gate (`checks/run.sh`) and the three Spaced Repetition decks confirmed in Obsidian.
 
 **Exit criterion:** cumulative quiz at 80 % or better, and the team skeleton script runs clean in your account.

@@ -28,7 +28,6 @@ docs: <official docs URL this note was checked against>
 
 No direct cost.
 
-**vs Hive:** <one line: what changes from the Hive-era habit>.
 
 ## Related
 
